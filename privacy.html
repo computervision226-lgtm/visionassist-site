@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy – VisionAssist</title>
+<meta name="description" content="What VisionAssist keeps on your iPhone and in your account, who else handles it, and how to delete it.">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the policy</a>
+<header class="top">
+  <div class="inner">
+    <a class="brand" href="index.html">VisionAssist</a>
+    <nav class="site" aria-label="Site">
+      <ul>
+        <li><a href="index.html">Get the app</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="privacy.html" aria-current="page">Privacy</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Privacy Policy</h1>
+  <p class="meta">In effect from October 13, 2026.</p>
+
+  <p class="lead">VisionAssist maps rooms so that someone who is blind or has low vision can ask where their things are and be guided to them. This page says what the app keeps, where, who else handles it, and how to delete it. It's written to be read, not skimmed past: if anything in it isn't clear, write to us.</p>
+
+  <h2 id="short">The short version</h2>
+  <ul>
+    <li>Without an account, everything stays on your iPhone.</li>
+    <li>With an account, your rooms (their plans, the names of what's in them, photos and maps) are kept in your account so they reach the phones and the computer you choose, and photos are sent to Claude, an AI service run by Anthropic, to name what's in them and read labels.</li>
+    <li>We don't show ads, don't track you, don't use analytics, and don't sell or rent anything about you. There are no third-party tracking tools in the app.</li>
+    <li>You can delete your account, and everything in it, from inside the app.</li>
+  </ul>
+
+  <h2 id="phone">What stays on your iPhone</h2>
+  <p>The app keeps your spaces on the phone: each room's plan, its map (a file the phone uses to recognize the room again; it isn't a picture and can't be viewed), the names, notes and positions of the things in it, a small photo of each thing, and your settings. These files are protected by iOS data protection, which encrypts them while the phone is locked.</p>
+  <p>The app asks iOS for permission before it uses the camera (to map and to guide), the microphone (only while you hold the microphone button), speech recognition (to turn what you say into a question), notifications (family alerts) and your location (see <a href="#location">Where a room is</a>). Each can be refused or withdrawn in the Settings app; the parts of VisionAssist that don't need it keep working.</p>
+  <p>Voice commands use Apple's speech recognition. Depending on the language and the phone, Apple may process what you say on its servers; that's covered by <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>, not by this one. Nothing you say is sent to us.</p>
+  <p>A space can be sent to another iPhone as a file (a <code>.vaspace</code> file). It holds the room's plan, names, notes, map and photos, but never a room's location. Who you send it to is up to you.</p>
+
+  <h2 id="account">What your account keeps</h2>
+  <p>You need an account to map rooms with Claude, to open your rooms on a computer, and to share rooms with your family. Creating one keeps the following with us, under an account ID:</p>
+  <dl class="facts">
+    <dt>Your email address and password</dt>
+    <dd>The address is confirmed with a code we email you, is how rooms are shared with you by name, and is where emails about your account go. The password is kept only as a one-way hash: neither we nor anyone else can read it. The times you sign in are logged by our sign-in service.</dd>
+    <dt>Your rooms</dt>
+    <dd>Each room's name, its plan (walls, doors, windows and furniture, as measured by the phone and as you've edited it), the things in it (names, notes, categories, measurements and positions, including what's inside drawers and closets), its map file, and the photos the app took while scanning: pictures of the room, close-ups of the insides of drawers and closets, and a small photo of each thing.</dd>
+    <dt id="location">Where a room is (optional)</dt>
+    <dd>If you allow location while scanning, the phone records the room's precise position and which way it faces, so the editor on the computer can show the building and floor on a map. It's kept with the room, is seen by anyone you share that room with, and is never put into a <code>.vaspace</code> file. Refuse the location permission, or allow only an approximate one, and nothing is recorded; the room still works everywhere else.</dd>
+    <dt>Reports and alerts</dt>
+    <dd>When something can't be found, or isn't where the map said, the phone reports it to the room's owner and to the people the room is shared with, with the room, the thing, a short text, and the name the reporter typed for themselves. If you turn on family alerts, the app registers a push token for your phone (the address Apple's notification service delivers to) together with a random ID for this installation of the app and the language the phone uses, so alerts reach the right phones in the right language and never the phone a report came from.</dd>
+    <dt>Your plan</dt>
+    <dd>How much of your free minute of mapping you've used, and whether you have Plus. For each request made to Claude from your account, we record which account, which of the app's questions it was, the room or scan it was for, when, and how much of Claude's capacity it used. We don't keep the photo or Claude's answer in that record.</dd>
+  </dl>
+  <p>Everything above is kept in a database and file storage hosted for us by <a href="https://supabase.com/privacy">Supabase</a> in London, United Kingdom. Photos are in private storage: only the accounts that can see the room a photo belongs to can open it.</p>
+
+  <h2 id="others">Who else handles your data</h2>
+  <p>We use a few services to run VisionAssist. Each one receives only what it needs to do its part.</p>
+  <dl class="facts">
+    <dt>Anthropic (Claude)</dt>
+    <dd>Claude names what's in a scan and lists what's inside drawers and closets. In Use, when you ask it to, Claude finds a thing the phone's own detector can't see and reads labels. For that, photos taken by the app, with the room's name and the name and note of the thing being looked for, go through our server (which holds the key to Claude; the phone never has it) to Anthropic's API, which sends back the names, positions and text it found. Under Anthropic's commercial terms, what's sent to its API isn't used to train its models, and is kept only for a limited time for safety monitoring. See <a href="https://www.anthropic.com/privacy">Anthropic's privacy policy</a>. You can turn Claude off for scanning under the app's Claude settings; the phone then names only what its own detector knows.</dd>
+    <dt>Stripe</dt>
+    <dd>Plus is paid through a Stripe payment page that opens in Safari. Stripe collects your card details and billing information; we never see your card number. Stripe tells us the subscription's ID, its status (active, past due, cancelled) and the email it was paid with, together with your account ID, so Plus is turned on for the right account. See <a href="https://stripe.com/privacy">Stripe's privacy policy</a>. Stripe also emails you receipts and a link to manage or cancel the subscription.</dd>
+    <dt>Apple</dt>
+    <dd>The app comes from the App Store or TestFlight, family alerts are delivered by Apple's push notification service (which sees the alert's text), and voice commands use Apple's speech recognition, all under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>.</dd>
+    <dt>Our email service</dt>
+    <dd>The emails that confirm your address and reset your password are sent through an email service, which sees your address and the email's text (a code).</dd>
+  </dl>
+  <p>We don't share anything about you with anyone else, except when the law requires it.</p>
+
+  <h2 id="sharing">Rooms you share</h2>
+  <p>You can share a room with someone's account by their email address, either to see it or to see and change it. They then see everything in that room: its plan, the names and notes of what's in it, its photos, its map, its location if one was recorded, and the reports about it; and they see which account it was shared by. Sharing can be taken back at any time in the editor, and the room then leaves their phones. Rooms can't be made public on this service.</p>
+
+  <h2 id="deleting">How long we keep it, and deleting your account</h2>
+  <p>Your account and everything in it are kept until you delete the account. To delete it, open the app, tap the gear icon, then <strong>Account</strong>, then <strong>Delete account…</strong>. Our server deletes your photos and maps, then your account, with its rooms, the things in them, the reports, the push tokens and your sharing; shared rooms leave the phones they were shared with. If you have Plus, cancel it first (in the app, or with the link in Stripe's emails), because deleting the account wouldn't stop Stripe from charging the subscription; the app says so. You can also email us to have the account deleted.</p>
+  <p>Two things are kept after deletion: the records of the requests made to Claude, with the account removed from them, so our accounts stay right; and a one-way hash of your email address with how much of the free minute was used, so the free minute can't be had again by signing up again with the same address. Neither can be turned back into your email. Our database host's backups may hold a copy of deleted data for a short while after.</p>
+  <p>On the phone, deleting the app deletes its spaces, maps and photos.</p>
+
+  <h2 id="rights">Your choices</h2>
+  <p>You can see and change everything in your account from the app and the editor, and delete it as above. If you want a copy of what we hold about you, or want something corrected or deleted that you can't reach yourself, email us; we'll answer within a month. Where you live may give you further rights over your personal data, and we honor them.</p>
+
+  <h2 id="security">Security</h2>
+  <p>Everything between the app, the editor and our servers travels over HTTPS. Each account can reach only its own rooms and the rooms shared with it; that's decided in the database, not by the app, so a changed copy of the app can't get round it. Photos are in private storage. Passwords are stored as hashes. The keys to Claude and Stripe live only on our servers, never on phones. No system is perfect; if we learn of a breach that affects you, we'll tell you.</p>
+
+  <h2 id="children">Children</h2>
+  <p>VisionAssist isn't directed at children under 13, and we don't knowingly keep an account for one. If you believe a child has made an account, write to us and we'll delete it.</p>
+
+  <h2 id="changes">Changes to this policy</h2>
+  <p>If this policy changes, the new version is posted here with its date. For a change that matters to what we keep or who handles it, we email every account before it takes effect.</p>
+
+  <h2 id="contact">Contact</h2>
+  <p>VisionAssist is run by its developer. Questions, requests and complaints about privacy: <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>.</p>
+</main>
+
+<footer class="bottom">
+  <div class="inner">
+    VisionAssist · <a href="support.html">Support</a> · <a href="privacy.html">Privacy</a> · <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>
+  </div>
+</footer>
+</body>
+</html>
