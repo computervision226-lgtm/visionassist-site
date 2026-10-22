@@ -345,6 +345,32 @@ button { cursor: pointer; }
   overflow-y: auto; min-height: 0; padding: 16px; display: flex; flex-direction: column; gap: 16px;
 }
 .inspector > * { flex: none; }
+/* The room assistant: a chat about the room, floating over the stage. */
+.chat {
+  position: fixed; inset-inline-end: 16px; bottom: 16px; z-index: 30;
+  width: min(420px, calc(100vw - 32px)); height: min(580px, calc(100vh - 96px));
+  display: flex; flex-direction: column; background: var(--panel); color: var(--ink);
+  border: 1px solid var(--rule-strong); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden;
+}
+.chat-head { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--rule); }
+.chat-head strong { flex: 1; min-width: 0; font-size: 15px; }
+.chat-log { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.chat-msg { max-width: 92%; padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
+.chat-msg.user { align-self: flex-end; background: var(--blue); color: #fff; border-end-end-radius: 4px; }
+:root[data-theme="dark"] .chat-msg.user { color: #0c1218; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chat-msg.user { color: #0c1218; } }
+.chat-msg.assistant { align-self: flex-start; background: var(--sheet); border: 1px solid var(--rule); border-end-start-radius: 4px; }
+.chat-msg.error { align-self: flex-start; background: var(--danger-soft); color: var(--danger); }
+.chat-msg.thinking { align-self: flex-start; color: var(--ink-3); font-style: italic; }
+.chat-msg p { margin: 0 0 6px; } .chat-msg p:last-child { margin: 0; }
+.chat-msg ul { margin: 0 0 6px; padding-inline-start: 18px; } .chat-msg ul:last-child { margin: 0; }
+.chat-intro { color: var(--ink-2); font-size: 13.5px; }
+.chat-ideas { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
+.chat-ideas button { font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--rule-strong); background: var(--sheet); color: var(--ink-2); }
+.chat-ideas button:hover { border-color: var(--ink-3); color: var(--ink); }
+.chat-form { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--rule); align-items: flex-end; }
+.chat-form textarea { flex: 1; min-width: 0; resize: none; max-height: 120px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--sheet); color: var(--ink); }
+.chat-form .btn { min-height: 38px; padding-block: 6px; }
 .photo {
   width: 100%; aspect-ratio: 4 / 3; max-width: 100%; border-radius: 10px; background: var(--floor);
   display: grid; place-items: center; overflow: hidden; color: var(--ink-3);
@@ -569,6 +595,10 @@ button { cursor: pointer; }
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5l.8-3.2 7.9-7.9 2.4 2.4-7.9 7.9zM9.8 3.8l2.4 2.4"/></svg>
       <span data-i18n="Edit plan">Edit plan</span>
     </button>
+    <button class="btn" type="button" id="ask-room" aria-pressed="false" hidden>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>
+      <span data-i18n="Ask">Ask</span>
+    </button>
     <span class="status" id="status" data-state="ok" aria-live="polite"><span class="dot"></span><span id="status-text" data-i18n="Connected">Connected</span></span>
     <span class="account" id="account"></span>
     <button class="btn ghost lang-switch" type="button" data-lang-switch lang="ar">العربية</button>
@@ -637,6 +667,20 @@ button { cursor: pointer; }
   </main>
 
   <aside class="inspector empty" id="inspector" aria-label="Selected item" data-i18n-aria-label="Selected item"></aside>
+
+  <section class="chat" id="chat" hidden role="dialog" aria-label="Ask about this room" data-i18n-aria-label="Ask about this room">
+    <header class="chat-head">
+      <strong data-i18n="Ask about this room">Ask about this room</strong>
+      <button class="btn ghost" type="button" id="chat-clear" data-i18n="Start again">Start again</button>
+      <button class="tool" type="button" id="chat-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+    </header>
+    <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
+    <div class="chat-ideas" id="chat-ideas"></div>
+    <form class="chat-form" id="chat-form">
+      <textarea id="chat-input" rows="2" dir="auto" placeholder="Where are the keys?" data-i18n-placeholder="Where are the keys?" aria-label="Your question" data-i18n-aria-label="Your question"></textarea>
+      <button class="btn primary" type="submit" id="chat-send" data-i18n="Send">Send</button>
+    </form>
+  </section>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
@@ -945,6 +989,25 @@ const AR = {
   "Draw a piece of furniture": "ارسم قطعة أثاث",
   "Draw a wall": "ارسم جدارًا",
   "Edit plan": "تعديل المخطط",
+  "Ask": "اسأل",
+  "Ask about this room": "اسأل عن هذه الغرفة",
+  "Start again": "ابدأ من جديد",
+  "Send": "إرسال",
+  "Your question": "سؤالك",
+  "Where are the keys?": "أين المفاتيح؟",
+  "What's hard to find here, and how could it be easier?": "ما الذي يصعب العثور عليه هنا، وكيف يمكن تسهيله؟",
+  "What would a room like this usually have that isn't listed?": "ما الذي توجد عادةً في غرفة كهذه ولم يُدرج هنا؟",
+  "Which places are crowded?": "أي الأماكن مزدحمة؟",
+  "Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.": "اسأل عمّا في %@: أين الأشياء، وما الذي يمكن تسهيل العثور عليه، وما يوجد عادةً في غرفة كهذه، وأين الازدحام. تأتي الإجابات من الغرفة كما هي مدرجة هنا.",
+  "Thinking…": "جارٍ التفكير…",
+  "Sign in again to ask.": "سجّل الدخول مرة أخرى لتسأل.",
+  "The assistant needs VisionAssist Plus, like Claude in Use: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى VisionAssist Plus، مثل Claude في الاستخدام: في التطبيق، رمز الترس، ثم Claude، ثم احصل على Plus. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
+  "This month's Claude allowance is used up. It starts again next month.": "استُنفدت حصة Claude لهذا الشهر. تبدأ من جديد الشهر القادم.",
+  "Claude isn't set up in this cloud yet.": "لم يُعدّ Claude في هذه السحابة بعد.",
+  "Busy for a moment: try again.": "مشغول للحظة: حاول مرة أخرى.",
+  "Claude took too long to answer. Try again.": "استغرق Claude وقتًا طويلًا في الإجابة. حاول مرة أخرى.",
+  "Couldn't ask: %@": "تعذّر السؤال: %@",
+  "Couldn't reach the assistant. Is the computer online?": "تعذّر الوصول إلى المساعد. هل الكمبيوتر متصل بالإنترنت؟",
   "Editing the plan": "تعديل المخطط",
   "Electronics": "إلكترونيات",
   "Email": "البريد الإلكتروني",
@@ -1873,6 +1936,8 @@ function openRoomData(room, items) {
   $("room-title").title = isMine(room) ? "" : sharedBy(room);
   $("view-toggle").hidden = false;
   $("add-item").hidden = !room.layout || !canChangeItems(room);
+  $("ask-room").hidden = state.mode !== "remote";
+  if (chat.roomId && chat.roomId !== room.id) chatReset();
   watchTheirs();
   renderAll();
 }
@@ -1902,6 +1967,8 @@ function closeRoom(note = null) {
   $("room-title").hidden = true;
   $("view-toggle").hidden = true;
   $("add-item").hidden = true;
+  $("ask-room").hidden = true;
+  chatClose();
   disposeThree();
   renderAll();
   if (note) flash(note);
@@ -2975,6 +3042,201 @@ function roomSize(layout, rotation = planRotation(layout)) {
   const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
   const heights = (layout.surfaces || []).filter((s) => s.kind === "wall").map((s) => s.dimensions?.[1] || 0);
   return { w: Math.max(...xs) - Math.min(...xs), d: Math.max(...zs) - Math.min(...zs), h: Math.max(...heights, 0), minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
+}
+
+// ----- The room assistant: a chat about the room, with Claude -----
+// What the editor knows of the room (its plan, furniture, places and the
+// things in them) goes to the cloud's claude function with each question;
+// Claude answers from it: where things are, how to make them easier to find
+// with low vision, what a room like this usually has, where it's crowded.
+// With Plus, like Claude in Use. Nothing is kept: a conversation lives
+// while the room is open.
+const chat = { messages: [], busy: false, roomId: null };
+
+/** The room's data for the assistant, compact and in its own coordinates (meters; x and z on the floor, y up). */
+function roomContext() {
+  const room = state.room;
+  if (!room) return null;
+  const layout = room.layout || {};
+  const r2 = (v) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v * 100) / 100 : null);
+  const point = (p) => (Array.isArray(p) && p.length >= 3 ? { x: r2(p[0]), y: r2(p[1]), z: r2(p[2]) } : null);
+  const size = (d) => (Array.isArray(d) && d.length >= 3 ? { width: r2(d[0]), height: r2(d[1]), depth: r2(d[2]) } : null);
+  const mid = (surface) => { const [a, b] = surfaceEnds(surface); return { x: r2((a[0] + b[0]) / 2), z: r2((a[1] + b[1]) / 2) }; };
+  const walls = (layout.surfaces || []).filter((x) => x.kind === "wall");
+  // (The room's own sides, as the plan shows them, whichever way it's turned in the map's coordinates.)
+  const bounds = walls.length ? roomSize(layout) : null;
+  const plan = {
+    floor: bounds ? { width: r2(bounds.w), depth: r2(bounds.d), height: r2(bounds.h) } : null,
+    walls: walls.length,
+    doors: (layout.surfaces || []).filter((x) => x.kind === "door" || x.kind === "opening").map((x) => ({ kind: x.kind === "door" ? (x.isOpen === false ? "door, may be closed" : "door") : "doorway", at: mid(x), width: r2(x.dimensions?.[0]) })),
+    windows: (layout.surfaces || []).filter((x) => x.kind === "window").map((x) => ({ at: mid(x), width: r2(x.dimensions?.[0]) })),
+    furniture: (layout.furniture || []).map((f) => { const m = mat(f.transform); return { kind: furnitureName(f.category), at: { x: r2(m[12]), z: r2(m[14]) }, size: size(f.dimensions) }; }),
+    rooms: (layout.rooms || []).map((x) => x.name).filter(Boolean),
+  };
+  const byId = new Map(state.items.map((i) => [idKey(i.id), i]));
+  const describe = (i) => {
+    const entry = { name: i.name || "", at: point(i.position), size: size(i.size) };
+    if (i.note) entry.note = i.note;
+    if (i.feel) entry.feel = i.feel;
+    if (i.category) entry.category = i.category;
+    if (i.room) entry.room = i.room;
+    if (i.taken_at) entry.taken = true;
+    if (i.placement === "web") entry.placedByHand = true;
+    const listed = (i.contents || []).filter((c) => c && c.name).map((c) => (c.note ? { name: c.name, note: c.note } : { name: c.name }));
+    if (listed.length) entry.listedInside = listed;
+    const inside = state.items.filter((j) => j.parent_id && idKey(j.parent_id) === idKey(i.id)).map(describe);
+    if (inside.length) entry.things = inside;
+    return entry;
+  };
+  const places = state.items.filter((i) => !i.parent_id || !byId.has(idKey(i.parent_id))).map(describe);
+  const context = { room: room.name || "", plan, places, counts: { places: places.length, items: state.items.length } };
+  // (Within what the function takes: without notes and feel first, then the smallest things.)
+  let text = JSON.stringify(context);
+  if (text.length > 55_000) {
+    const strip = (e) => { delete e.note; delete e.feel; (e.things || []).forEach(strip); };
+    context.places.forEach(strip);
+    text = JSON.stringify(context);
+  }
+  while (text.length > 55_000 && context.places.length > 1) {
+    context.places.pop();
+    context.leftOut = (context.leftOut || 0) + 1;
+    text = JSON.stringify(context);
+  }
+  return context;
+}
+
+/** Claude's answer, as paragraphs and lists (its own markdown, lightly). */
+function chatHTML(text) {
+  const inline = (line) => esc(line).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  const out = [];
+  let list = null;
+  for (const raw of String(text || "").split("\n")) {
+    const line = raw.trim();
+    const item = line.match(/^(?:[-*\u2022]|\d+[.)])\s+(.*)$/);
+    if (item) {
+      if (!list) { list = []; out.push(list); }
+      list.push(inline(item[1]));
+    } else {
+      list = null;
+      if (line) out.push(inline(line.replace(/^#+\s*/, "")));
+    }
+  }
+  return out.map((part) => Array.isArray(part) ? `<ul>${part.map((li) => `<li>${li}</li>`).join("")}</ul>` : `<p>${part}</p>`).join("");
+}
+
+function chatIdeas() {
+  return [tr("Where are the keys?"), tr("What's hard to find here, and how could it be easier?"),
+          tr("What would a room like this usually have that isn't listed?"), tr("Which places are crowded?")];
+}
+
+function renderChat() {
+  const log = $("chat-log");
+  log.innerHTML = "";
+  if (!chat.messages.length) {
+    const intro = document.createElement("p");
+    intro.className = "chat-intro";
+    intro.textContent = tr("Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.", state.room?.name || tr("this room"));
+    log.appendChild(intro);
+  }
+  for (const m of chat.messages) {
+    const box = document.createElement("div");
+    box.className = "chat-msg " + m.role;
+    box.dir = "auto";
+    if (m.role === "assistant") box.innerHTML = chatHTML(m.text);
+    else box.textContent = m.text;
+    log.appendChild(box);
+  }
+  if (chat.busy) {
+    const box = document.createElement("div");
+    box.className = "chat-msg thinking";
+    box.textContent = tr("Thinking…");
+    log.appendChild(box);
+  }
+  log.scrollTop = log.scrollHeight;
+  const ideas = $("chat-ideas");
+  ideas.innerHTML = "";
+  ideas.hidden = chat.messages.length > 0;
+  if (!chat.messages.length) {
+    chatIdeas().forEach((idea) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = idea;
+      b.addEventListener("click", () => chatSend(idea));
+      ideas.appendChild(b);
+    });
+  }
+  $("chat-send").disabled = chat.busy;
+  $("ask-room").setAttribute("aria-pressed", String(!$("chat").hidden));
+}
+
+function chatOpen() {
+  if (!state.room) return;
+  chat.roomId = state.room.id;
+  $("chat").hidden = false;
+  renderChat();
+  $("chat-input").focus();
+}
+
+function chatClose() {
+  $("chat").hidden = true;
+  $("ask-room").setAttribute("aria-pressed", "false");
+}
+
+function chatReset() {
+  chat.messages = [];
+  chat.roomId = state.room?.id ?? null;
+  if (!$("chat").hidden) renderChat();
+}
+
+/** Why a question wasn't answered, in the editor's words. */
+function chatProblem(status, body) {
+  const type = body?.error?.type;
+  if (status === 401) return tr("Sign in again to ask.");
+  if (type === "needs_plus") return tr("The assistant needs VisionAssist Plus, like Claude in Use: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.");
+  if (type === "monthly_limit") return tr("This month's Claude allowance is used up. It starts again next month.");
+  if (type === "not_set_up") return tr("Claude isn't set up in this cloud yet.");
+  if (status === 429 || type === "busy") return tr("Busy for a moment: try again.");
+  if (status === 504 || type === "timeout") return tr("Claude took too long to answer. Try again.");
+  const message = body?.error?.message;
+  return message ? tr("Couldn't ask: %@", message) : tr("Couldn't reach the assistant. Is the computer online?");
+}
+
+async function chatSend(text) {
+  const question = String(text || "").trim();
+  if (!question || chat.busy || !state.room || !state.client) return;
+  const room = state.room;
+  chat.messages.push({ role: "user", text: question });
+  chat.busy = true;
+  $("chat-input").value = "";
+  renderChat();
+  let outcome;
+  try {
+    const { data } = await state.client.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) throw { status: 401 };
+    const service = SERVICE.url && SERVICE.key;
+    const url = (service ? SERVICE.url : store.get(STORAGE_KEYS.url) || "").replace(/\/+$/, "");
+    const key = service ? SERVICE.key : store.get(STORAGE_KEYS.key) || "";
+    const response = await fetch(`${url}/functions/v1/claude/chat`, {
+      method: "POST",
+      headers: { apikey: key, authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ room: room.id, arabic: LANG === "ar", messages: chat.messages.map((m) => ({ role: m.role, text: m.text })).slice(-20), context: roomContext() }),
+    });
+    const body = await response.json().catch(() => null);
+    outcome = response.ok && typeof body?.answer === "string" ? { answer: body.answer } : { problem: chatProblem(response.status, body) };
+  } catch (error) {
+    outcome = { problem: chatProblem(error?.status ?? 0, null) };
+  }
+  chat.busy = false;
+  // (The room may have been closed, or another opened, meanwhile.)
+  if (state.room?.id !== room.id) return;
+  if (outcome.answer) chat.messages.push({ role: "assistant", text: outcome.answer });
+  else {
+    chat.messages.pop();
+    $("chat-input").value = question;
+    chat.messages.push({ role: "error", text: outcome.problem });
+  }
+  renderChat();
 }
 
 // ----- Plan view (SVG, meters) -----
@@ -6585,6 +6847,13 @@ function wireEvents() {
   });
   $("add-item").addEventListener("click", () => { if (state.view !== "plan") setView("plan"); setPlacing(state.placing ? null : { mode: "add" }); });
   $("edit-plan").addEventListener("click", () => setEditing(!state.editing));
+  $("ask-room").addEventListener("click", () => { if ($("chat").hidden) chatOpen(); else chatClose(); });
+  $("chat-close").addEventListener("click", chatClose);
+  $("chat-clear").addEventListener("click", () => { chat.messages = []; renderChat(); $("chat-input").focus(); });
+  $("chat-form").addEventListener("submit", (event) => { event.preventDefault(); chatSend($("chat-input").value); });
+  $("chat-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); chatSend($("chat-input").value); }
+  });
   $("edit-bar").addEventListener("click", (e) => {
     const tool = e.target.closest("[data-tool]");
     if (tool) { setTool(tool.dataset.tool); return; }
