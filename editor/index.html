@@ -1008,6 +1008,8 @@ const AR = {
   "Claude took too long to answer. Try again.": "استغرق Claude وقتًا طويلًا في الإجابة. حاول مرة أخرى.",
   "Couldn't ask: %@": "تعذّر السؤال: %@",
   "Couldn't reach the assistant. Is the computer online?": "تعذّر الوصول إلى المساعد. هل الكمبيوتر متصل بالإنترنت؟",
+  "Free to try in the sample room; your own rooms need Plus.": "مجاني للتجربة في الغرفة التجريبية؛ أما غرفك فتحتاج إلى Plus.",
+  "The sample room's assistant has answered enough for today. Sign in to ask about your own rooms.": "أجاب مساعد الغرفة التجريبية بما يكفي لهذا اليوم. سجّل الدخول لتسأل عن غرفك.",
   "Editing the plan": "تعديل المخطط",
   "Electronics": "إلكترونيات",
   "Email": "البريد الإلكتروني",
@@ -1936,7 +1938,8 @@ function openRoomData(room, items) {
   $("room-title").title = isMine(room) ? "" : sharedBy(room);
   $("view-toggle").hidden = false;
   $("add-item").hidden = !room.layout || !canChangeItems(room);
-  $("ask-room").hidden = state.mode !== "remote";
+  // (The sample room's assistant is for anyone, where the service is known.)
+  $("ask-room").hidden = !(state.mode === "remote" || (state.mode === "demo" && !!chatService()));
   if (chat.roomId && chat.roomId !== room.id) chatReset();
   watchTheirs();
   renderAll();
@@ -3053,6 +3056,14 @@ function roomSize(layout, rotation = planRotation(layout)) {
 // while the room is open.
 const chat = { messages: [], busy: false, roomId: null };
 
+/** Where the assistant is: the service's project (or the one signed in to), or null. */
+function chatService() {
+  const service = SERVICE.url && SERVICE.key;
+  const url = (service ? SERVICE.url : store.get(STORAGE_KEYS.url) || "").replace(/\/+$/, "");
+  const key = service ? SERVICE.key : store.get(STORAGE_KEYS.key) || "";
+  return url && key ? { url, key } : null;
+}
+
 /** The room's data for the assistant, compact and in its own coordinates (meters; x and z on the floor, y up). */
 function roomContext() {
   const room = state.room;
@@ -3135,7 +3146,8 @@ function renderChat() {
   if (!chat.messages.length) {
     const intro = document.createElement("p");
     intro.className = "chat-intro";
-    intro.textContent = tr("Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.", state.room?.name || tr("this room"));
+    intro.textContent = tr("Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.", state.room?.name || tr("this room"))
+      + (state.mode === "demo" ? " " + tr("Free to try in the sample room; your own rooms need Plus.") : "");
     log.appendChild(intro);
   }
   for (const m of chat.messages) {
@@ -3192,6 +3204,7 @@ function chatReset() {
 function chatProblem(status, body) {
   const type = body?.error?.type;
   if (status === 401) return tr("Sign in again to ask.");
+  if (type === "demo_limit") return tr("The sample room's assistant has answered enough for today. Sign in to ask about your own rooms.");
   if (type === "needs_plus") return tr("The assistant needs VisionAssist Plus, like Claude in Use: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.");
   if (type === "monthly_limit") return tr("This month's Claude allowance is used up. It starts again next month.");
   if (type === "not_set_up") return tr("Claude isn't set up in this cloud yet.");
@@ -3203,7 +3216,9 @@ function chatProblem(status, body) {
 
 async function chatSend(text) {
   const question = String(text || "").trim();
-  if (!question || chat.busy || !state.room || !state.client) return;
+  const demo = state.mode === "demo";
+  const service = chatService();
+  if (!question || chat.busy || !state.room || !service || (!demo && !state.client)) return;
   const room = state.room;
   chat.messages.push({ role: "user", text: question });
   chat.busy = true;
@@ -3211,16 +3226,19 @@ async function chatSend(text) {
   renderChat();
   let outcome;
   try {
-    const { data } = await state.client.auth.getSession();
-    const token = data?.session?.access_token;
-    if (!token) throw { status: 401 };
-    const service = SERVICE.url && SERVICE.key;
-    const url = (service ? SERVICE.url : store.get(STORAGE_KEYS.url) || "").replace(/\/+$/, "");
-    const key = service ? SERVICE.key : store.get(STORAGE_KEYS.key) || "";
-    const response = await fetch(`${url}/functions/v1/claude/chat`, {
+    const headers = { apikey: service.key, "content-type": "application/json" };
+    if (!demo) {
+      const { data } = await state.client.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) throw { status: 401 };
+      headers.authorization = `Bearer ${token}`;
+    }
+    // (The sample room's assistant answers anyone, a few times a day; the real one needs the sign-in.)
+    const turns = chat.messages.map((m) => ({ role: m.role, text: m.text })).slice(demo ? -10 : -20);
+    const response = await fetch(`${service.url}/functions/v1/claude/${demo ? "demo" : "chat"}`, {
       method: "POST",
-      headers: { apikey: key, authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ room: room.id, arabic: LANG === "ar", messages: chat.messages.map((m) => ({ role: m.role, text: m.text })).slice(-20), context: roomContext() }),
+      headers,
+      body: JSON.stringify({ room: demo ? null : room.id, arabic: LANG === "ar", messages: turns, context: roomContext() }),
     });
     const body = await response.json().catch(() => null);
     outcome = response.ok && typeof body?.answer === "string" ? { answer: body.answer } : { problem: chatProblem(response.status, body) };
