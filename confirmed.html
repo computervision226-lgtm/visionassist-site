@@ -3,10 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Email confirmed – VisionAssist</title>
-<meta name="description" content="Where the link in a VisionAssist email lands: your address is confirmed, go back to the app and sign in.">
+<title>Your account – VisionAssist</title>
+<meta name="description" content="Where the link in a VisionAssist email lands: your address is confirmed, or you choose a new password here.">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="site.css">
+<style>
+  form.reset { max-width: 28rem; }
+  form.reset label { display: block; font-weight: 700; margin: 1rem 0 0.3rem; }
+  form.reset input {
+    font: inherit; width: 100%; box-sizing: border-box; padding: 0.7rem 0.8rem;
+    border: 2px solid var(--rule); border-radius: 0.6rem; background: var(--bg); color: var(--fg);
+  }
+  form.reset input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  form.reset button { font: inherit; border: 0; cursor: pointer; margin-top: 1.2rem; }
+  form.reset button[disabled] { opacity: 0.6; cursor: default; }
+  .note { color: var(--muted); }
+  .problem { color: #b3261e; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { .problem { color: #ff8a80; } }
+</style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the message</a>
@@ -29,13 +43,30 @@
     <h1>Your email is confirmed</h1>
     <p class="lead">Thank you. Go back to VisionAssist on your iPhone, tap <strong>Sign in</strong>, and sign in with your email and the password you chose. (If the app is still asking for a code, tap <strong>Sign in</strong> instead: the link did the same job.)</p>
   </div>
+
   <div id="recovery" hidden>
-    <h1>Choose your new password in the app</h1>
-    <p class="lead">This link confirms it's you. Go back to VisionAssist on your iPhone and type in the <strong>code from the same email</strong> with your new password.</p>
+    <h1>Choose a new password</h1>
+    <p class="lead">This link confirms it's you. Choose the new password for your VisionAssist account here, then sign in with it in the app.</p>
+    <form class="reset" id="reset-form" novalidate>
+      <label for="password">New password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="again">The same again</label>
+      <input id="again" name="again" type="password" autocomplete="new-password" minlength="8" required>
+      <p class="note">At least 8 characters. Some services also ask for a capital letter, a small letter and a digit.</p>
+      <p class="problem" id="problem" role="alert" hidden></p>
+      <button class="button" type="submit" id="submit">Set the new password</button>
+    </form>
   </div>
+
+  <div id="reset-done" hidden>
+    <h1>Your new password is set</h1>
+    <p class="lead">Go back to VisionAssist on your iPhone (or to the editor on a computer) and sign in with your email and the new password.</p>
+  </div>
+
   <div id="expired" hidden>
     <h1>This link has already been opened, or has expired</h1>
-    <p class="lead">Most often your mail service's safety check opened it first, and that confirmed your email already: open VisionAssist and <strong>sign in</strong> with your email and the password you chose (the app's confirmation screen signs you in by itself, too). If the link is more than an hour old, ask the app to <strong>send the code again</strong>.</p>
+    <p class="lead" id="expired-signup">Most often your mail service's safety check opened it first, and that confirmed your email already: open VisionAssist and <strong>sign in</strong> with your email and the password you chose (the app's confirmation screen signs you in by itself, too). If the link is more than an hour old, ask the app to <strong>send the code again</strong>.</p>
+    <p class="lead" id="expired-recovery" hidden>A password link works once, within an hour. Ask the app for a new one (<strong>Sign in</strong>, then <strong>Forgotten your password?</strong>) and open the newest email.</p>
   </div>
 
   <div class="card">
@@ -44,19 +75,74 @@
 </main>
 
 <script>
-  // Supabase sends the person here after the link in the email: with
-  // #access_token=...&type=signup (or recovery), or with #error=... when the
-  // link was used before or has expired. Nothing here keeps the tokens.
+  // Supabase sends the person here after the link in an email, with
+  // #access_token=...&refresh_token=...&type=signup (or recovery), or with
+  // #error=... when the link was used before or has expired. A recovery
+  // link's token lets this page set the new password (the project's public
+  // key below is the same one the editor uses); nothing is kept afterwards.
   (function () {
+    var SERVICE = { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
     var hash = new URLSearchParams(location.hash.replace(/^#/, ""));
     var query = new URLSearchParams(location.search);
     var error = hash.get("error") || hash.get("error_code") || query.get("error") || query.get("error_code");
     var type = hash.get("type") || query.get("type");
-    var show = error ? "expired" : (type === "recovery" ? "recovery" : "done");
-    ["done", "recovery", "expired"].forEach(function (id) {
+    var token = hash.get("access_token");
+    var show = error ? "expired" : (type === "recovery" && token ? "recovery" : "done");
+    ["done", "recovery", "reset-done", "expired"].forEach(function (id) {
       document.getElementById(id).hidden = id !== show;
     });
+    if (show === "expired") {
+      var recoveryLink = type === "recovery" || /recovery/i.test(hash.get("error_description") || "");
+      document.getElementById("expired-signup").hidden = recoveryLink;
+      document.getElementById("expired-recovery").hidden = !recoveryLink;
+    }
     if (location.hash) { history.replaceState(null, "", location.pathname); }
+    if (show !== "recovery") { return; }
+
+    var form = document.getElementById("reset-form");
+    var problem = document.getElementById("problem");
+    var submit = document.getElementById("submit");
+    function say(text) { problem.textContent = text; problem.hidden = !text; }
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var password = form.password.value, again = form.again.value;
+      if (password.length < 8) { say("Choose a password of at least 8 characters."); form.password.focus(); return; }
+      if (password !== again) { say("The two passwords aren't the same."); form.again.focus(); return; }
+      say("");
+      submit.disabled = true;
+      fetch(SERVICE.url + "/auth/v1/user", {
+        method: "PUT",
+        headers: { "apikey": SERVICE.key, "authorization": "Bearer " + token, "content-type": "application/json" },
+        body: JSON.stringify({ password: password })
+      }).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (body) {
+          if (response.ok) {
+            // The link's session isn't needed any more.
+            fetch(SERVICE.url + "/auth/v1/logout", { method: "POST", headers: { "apikey": SERVICE.key, "authorization": "Bearer " + token } }).catch(function () {});
+            token = null;
+            document.getElementById("recovery").hidden = true;
+            document.getElementById("reset-done").hidden = false;
+            document.getElementById("reset-done").querySelector("h1").focus && document.getElementById("reset-done").querySelector("h1").setAttribute("tabindex", "-1");
+            return;
+          }
+          var message = body.msg || body.message || body.error_description || "";
+          var code = body.error_code || body.code || "";
+          if (code === "weak_password" || /password should/i.test(message)) {
+            say("That password isn't allowed here: use at least 8 characters, with a capital letter, a small letter and a digit, and not something common.");
+          } else if (code === "same_password" || /different from the old/i.test(message)) {
+            say("That's the password you already have. Choose a new one, or sign in with it.");
+          } else if (response.status === 401 || response.status === 403) {
+            say("This link has expired. Ask the app for a new one and open the newest email.");
+          } else {
+            say("Couldn't set the password: " + (message || ("error " + response.status)) + ". Try again in a minute.");
+          }
+          submit.disabled = false;
+        });
+      }).catch(function () {
+        say("Couldn't reach the service. Check the connection and try again.");
+        submit.disabled = false;
+      });
+    });
   })();
 </script>
 </body>
