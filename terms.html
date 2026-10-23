@@ -88,5 +88,40 @@
     VisionAssist · <a href="support.html">Support</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>
   </div>
 </footer>
+<script>
+// A page view for the site's Insights (visionmap.store/insights.html): the
+// page's path and which site sent you, under a random ID this browser keeps
+// (the same one the editor uses), so a visit hangs together. No cookies,
+// nothing else. Taps on links to the app or the editor are noted too.
+(function () {
+  var SERVICE = { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
+  function install() {
+    try {
+      var id = localStorage.getItem("va.install");
+      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, ""); localStorage.setItem("va.install", id); }
+      return id;
+    } catch (e) { return "unknown"; }
+  }
+  var session = Math.random().toString(36).slice(2);
+  function send(name, props) {
+    var event = { surface: "site", name: name, at: new Date().toISOString(), props: props || {}, install: install(), session: session, language: (navigator.language || "").slice(0, 16) };
+    try {
+      fetch(SERVICE.url + "/rest/v1/rpc/record_events", { method: "POST", keepalive: true,
+        headers: { apikey: SERVICE.key, "content-type": "application/json" }, body: JSON.stringify({ batch: [event] }) }).catch(function () {});
+    } catch (e) {}
+  }
+  var from = "";
+  try { from = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) {}
+  if (from === location.hostname) from = "";
+  send("page.view", { path: location.pathname, from: from });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (/apps\.apple\.com|testflight\.apple\.com/.test(href)) send("page.store", { where: location.pathname });
+    else if (/^editor\/?$|\/editor\/?$/.test(href)) send("page.editor", { where: location.pathname });
+  });
+})();
+</script>
 </body>
 </html>

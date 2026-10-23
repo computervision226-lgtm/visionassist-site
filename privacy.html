@@ -33,7 +33,7 @@
   <ul>
     <li>Without an account, everything stays on your iPhone.</li>
     <li>With an account, your rooms (their plans, the names of what's in them, photos and maps) are kept in your account so they reach the phones and the computer you choose, and photos are sent to Claude, an AI service run by Anthropic, to name what's in them and read labels.</li>
-    <li>We don't show ads, don't track you, don't use analytics, and don't sell or rent anything about you. There are no third-party tracking tools in the app.</li>
+    <li>We don't show ads, don't track you across other apps or sites, and don't sell or rent anything about you. There are no third-party analytics or tracking tools in the app or on this site. The app and this site do tell our own service what happens in them (a scan finished, a thing found or not, a command not understood, a page opened), so we can fix what doesn't work; see <a href="#usage">How the app is used</a>. In the app you can turn that off.</li>
     <li>You can delete your account, and everything in it, from inside the app.</li>
   </ul>
 
@@ -54,6 +54,8 @@
     <dd>If you allow location while scanning, the phone records the room's precise position and which way it faces, so the editor on the computer can show the building and floor on a map. It's kept with the room, is seen by anyone you share that room with, and is never put into a <code>.vaspace</code> file. Refuse the location permission, or allow only an approximate one, and nothing is recorded; the room still works everywhere else.</dd>
     <dt id="reports">Reports and alerts</dt>
     <dd>When something can't be found, isn't where the map said, or isn't on any map, the phone reports it to the room's owner and to the people who can make changes to the room, with the room, the thing asked for, a short text, the name the reporter typed for themselves (or, if none, the first part of their email), the reporter's account email, and a random ID for that installation of the app, so an alert never goes to the phone the report came from. If you turn on family alerts, the app also registers a push token for your phone (the address Apple's notification service delivers to) and the language the phone uses, so alerts reach the right phones in the right language.</dd>
+    <dt id="usage">How the app is used</dt>
+    <dd>So that we can see what works and what doesn't and keep improving VisionAssist, the app, the editor and this website send our own service a record of what happens in them: the screen opened, a scan started, finished, given up or failed (how long, how many walls and things), a thing asked for and whether it was known, whether the phone brought you to it, a label read or not, a command the app didn't understand and <em>the words it heard</em> (so we can teach it them), a page of this site opened and which site sent you, and errors with their messages. Each record has a time, the app's version and language, and whether VoiceOver was on. It never includes the names of your things or rooms, your photos, your location, or what you said when the app did understand it. When you're signed in, the records are under your account; when you're not (this website, the editor's sample room), only under a random ID your browser or phone makes up for itself, with the day's hash of your network address to count visitors. They're kept for 180 days, then deleted. In the app, the gear icon, then <strong>Share how the app is used</strong>, turns this off; the website and editor keep only the visit itself. We use these records only to understand and improve the product, never to make decisions about you.</dd>
     <dt>Your plan</dt>
     <dd>How much mapping you've used, the minutes you've bought, and whether you have Plus. For each request made to Claude from your account, we record which account, which of the app's questions it was (or that it was the editor's assistant), the room or scan it was for, when, and how much of Claude's capacity it used. We don't keep the photo, the question or Claude's answer in that record.</dd>
   </dl>
@@ -80,6 +82,7 @@
   <p>Your account and everything in it are kept until you delete the account. To delete it, open the app, tap the gear icon, then <strong>Account</strong>, then <strong>Delete account…</strong>. Our server deletes your photos and maps, then your account, with its rooms, the things in them, the reports, the push tokens and your sharing; shared rooms leave the phones they were shared with. If you have Plus, cancel it first (in the app, or with the link in Stripe's emails), because deleting the account wouldn't stop Stripe from charging the subscription; the app says so. You can also email us to have the account deleted.</p>
   <p>Your email address is also taken out of other people's rooms, where it was noted as who last saved a map, changed a thing or marked a report done; a copy already on a family phone keeps it until that room next syncs. People who shared rooms with you keep your address in their sharing list until they remove it.</p>
   <p>Two things are kept after deletion: the records of the requests made to Claude, with the account removed from them, so our accounts stay right; and a one-way hash of your email address with how much of the free minute was used, so the free minute can't be had again by signing up again with the same address. Neither can be turned back into your email. Our database host's backups may hold a copy of deleted data for a short while after.</p>
+  <p>The records of how the app is used (above) are kept for 180 days at most; those under your account lose the account when it's deleted and go when their time is up.</p>
   <p>On the phone, deleting the app deletes its spaces, maps and photos.</p>
 
   <h2 id="rights">Your choices</h2>
@@ -103,5 +106,40 @@
     VisionAssist · <a href="support.html">Support</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>
   </div>
 </footer>
+<script>
+// A page view for the site's Insights (visionmap.store/insights.html): the
+// page's path and which site sent you, under a random ID this browser keeps
+// (the same one the editor uses), so a visit hangs together. No cookies,
+// nothing else. Taps on links to the app or the editor are noted too.
+(function () {
+  var SERVICE = { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
+  function install() {
+    try {
+      var id = localStorage.getItem("va.install");
+      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, ""); localStorage.setItem("va.install", id); }
+      return id;
+    } catch (e) { return "unknown"; }
+  }
+  var session = Math.random().toString(36).slice(2);
+  function send(name, props) {
+    var event = { surface: "site", name: name, at: new Date().toISOString(), props: props || {}, install: install(), session: session, language: (navigator.language || "").slice(0, 16) };
+    try {
+      fetch(SERVICE.url + "/rest/v1/rpc/record_events", { method: "POST", keepalive: true,
+        headers: { apikey: SERVICE.key, "content-type": "application/json" }, body: JSON.stringify({ batch: [event] }) }).catch(function () {});
+    } catch (e) {}
+  }
+  var from = "";
+  try { from = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) {}
+  if (from === location.hostname) from = "";
+  send("page.view", { path: location.pathname, from: from });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (/apps\.apple\.com|testflight\.apple\.com/.test(href)) send("page.store", { where: location.pathname });
+    else if (/^editor\/?$|\/editor\/?$/.test(href)) send("page.editor", { where: location.pathname });
+  });
+})();
+</script>
 </body>
 </html>
