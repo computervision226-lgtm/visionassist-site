@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Email confirmed – VisionAssist</title>
+<meta name="description" content="Where the link in a VisionAssist email lands: your address is confirmed, go back to the app and sign in.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the message</a>
+<header class="top">
+  <div class="inner">
+    <a class="brand" href="index.html">VisionAssist</a>
+    <nav class="site" aria-label="Site">
+      <ul>
+        <li><a href="index.html">Get the app</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div id="done">
+    <h1>Your email is confirmed</h1>
+    <p class="lead">Thank you. Go back to VisionAssist on your iPhone, tap <strong>Sign in</strong>, and sign in with your email and the password you chose. (If the app is still asking for a code, tap <strong>Sign in</strong> instead: the link did the same job.)</p>
+  </div>
+  <div id="recovery" hidden>
+    <h1>Choose your new password in the app</h1>
+    <p class="lead">This link confirms it's you. Go back to VisionAssist on your iPhone and type in the <strong>code from the same email</strong> with your new password.</p>
+  </div>
+  <div id="expired" hidden>
+    <h1>This link has already been used, or has expired</h1>
+    <p class="lead">If you clicked it before, your email is already confirmed: open VisionAssist and <strong>sign in</strong> with your email and password. If it has expired, ask the app to <strong>send the code again</strong>, and use the code or the link within an hour.</p>
+  </div>
+
+  <div class="card">
+    <p>On a computer, your rooms are at <a href="editor/">visionmap.store/editor</a>: sign in there with the same email and password. Something wrong? Write to <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>.</p>
+  </div>
+</main>
+
+<script>
+  // Supabase sends the person here after the link in the email: with
+  // #access_token=...&type=signup (or recovery), or with #error=... when the
+  // link was used before or has expired. Nothing here keeps the tokens.
+  (function () {
+    var hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    var query = new URLSearchParams(location.search);
+    var error = hash.get("error") || hash.get("error_code") || query.get("error") || query.get("error_code");
+    var type = hash.get("type") || query.get("type");
+    var show = error ? "expired" : (type === "recovery" ? "recovery" : "done");
+    ["done", "recovery", "expired"].forEach(function (id) {
+      document.getElementById(id).hidden = id !== show;
+    });
+    if (location.hash) { history.replaceState(null, "", location.pathname); }
+  })();
+</script>
+</body>
+</html>
