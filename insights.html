@@ -46,6 +46,15 @@
   .session-head { font-weight: 700; margin: 0.9rem 0 0.2rem; }
   details summary { cursor: pointer; font-weight: 600; }
   .catalog dt { font-weight: 600; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; margin-top: 0.5rem; }
+  svg.plan { width: 100%; max-width: 40rem; height: auto; display: block; background: var(--card); border-radius: 0.75rem; }
+  svg.plan text { font-size: 10px; fill: var(--fg); }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0 1rem; }
+  .thumbs figure { margin: 0; width: 9rem; }
+  .thumbs img { width: 9rem; height: 9rem; object-fit: cover; border-radius: 0.5rem; background: var(--card); display: block; }
+  .thumbs figcaption { font-size: 0.8rem; color: var(--muted); line-height: 1.3; margin-top: 0.2rem; }
+  td img.thumb { width: 3rem; height: 3rem; object-fit: cover; border-radius: 0.4rem; background: var(--card); display: block; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.3rem 1.2rem; margin: 0.5rem 0 1rem; font-size: 0.95rem; }
+  .facts div span:first-child { color: var(--muted); }
   .catalog dd { margin: 0 0 0 0; color: var(--muted); }
 </style>
 </head>
@@ -129,12 +138,24 @@
     <p class="muted">Everything the service holds, as of now. The events this page reads are kept for 180 days; the rest for as long as the account exists (the privacy policy says what each is).</p>
     <div class="tiles" id="tiles-stored"></div>
 
+    <h2>Rooms mapped lately</h2>
+    <p class="muted">Every room scanned or changed in the period, whoever's. <strong>Open</strong> shows the room as it is: the plan, where it is, everything in it, the photos. Each look is recorded.</p>
+    <div class="wrap"><table id="rooms"></table></div>
+
     <h2>Accounts and their trails</h2>
-    <p class="muted">Most recently seen first. <strong>Trail</strong> shows what that account did, step by step, newest session first.</p>
+    <p class="muted">Most recently seen first. <strong>Trail</strong> shows what that account did, step by step, newest session first; <strong>Account</strong> shows what it has: its plan and payments, its scans, its rooms. Each look at an account is recorded, and the account's owner can ask for the record.</p>
     <div class="wrap"><table id="people"></table></div>
     <div id="trail-box" hidden>
       <h3 id="trail-title">Trail</h3>
       <div id="trail"></div>
+    </div>
+    <div id="person-box" hidden>
+      <h3 id="person-title">Account</h3>
+      <div id="person"></div>
+    </div>
+    <div id="room-box" hidden>
+      <h3 id="room-title">Room</h3>
+      <div id="room"></div>
     </div>
     <details>
       <summary>A visitor's trail, by install ID</summary>
@@ -300,11 +321,14 @@
       rows += '<tr><td>' + esc(p.email || p.id) + (p.confirmed ? "" : ' <span class="muted">(not confirmed)</span>') + '</td><td>' + esc(when(p.created)) + '</td><td>' + esc(ago(p.last_event || p.last_sign_in)) + '</td>'
         + '<td class="n">' + n(p.events) + '</td><td class="n">' + (p.failed ? '<span class="bad">' + n(p.failed) + '</span>' : "0") + '</td><td class="n">' + n(p.scans) + '</td><td class="n">' + n(p.finds) + '</td><td class="n">' + n(p.rooms) + '</td>'
         + '<td>' + (p.plus ? "yes" : "") + '</td><td class="n">' + n(p.minutes_bought) + ' <span class="muted">+' + n(p.mapping_minutes) + ' used</span></td><td class="muted">' + esc((p.version || "") + (p.language ? " " + p.language : "")) + '</td>'
-        + '<td><button class="plain" type="button" data-trail="' + i + '">Trail</button></td></tr>';
+        + '<td><button class="plain" type="button" data-trail="' + i + '">Trail</button> <button class="plain" type="button" data-person="' + i + '">Account</button></td></tr>';
     });
     $("people").innerHTML = rows;
     $("people").querySelectorAll("button[data-trail]").forEach(function (b) {
       b.addEventListener("click", function () { var p = people[Number(b.getAttribute("data-trail"))]; showTrail({ person: p.id }, p.email || p.id); });
+    });
+    $("people").querySelectorAll("button[data-person]").forEach(function (b) {
+      b.addEventListener("click", function () { showPerson(people[Number(b.getAttribute("data-person"))]); });
     });
   }
 
@@ -330,6 +354,161 @@
     }).catch(function (e) { $("trail").innerHTML = '<p class="problem">' + esc(e.message) + '</p>'; });
   }
 
+  // ----- Support: rooms and accounts as they are -----
+  function roomCells(r) {
+    return '<td>' + esc(r.name || "(unnamed)") + (r.home_rooms && r.home_rooms.length ? ' <span class="muted">' + esc(r.home_rooms.join(", ")) + '</span>' : "") + (r.deleted ? ' <span class="bad">deleted</span>' : "") + '</td>'
+      + '<td>' + esc(r.scanned_at ? ago(r.scanned_at) : "never") + '</td><td>' + esc(ago(r.updated_at)) + '</td>'
+      + '<td class="n">' + (r.area ? n(r.area) + " m²" : "–") + '</td><td class="n">' + n(r.walls) + '/' + n(r.doors) + '/' + n(r.windows) + '</td><td class="n">' + n(r.furniture) + '</td>'
+      + '<td class="n">' + n(r.items) + (r.items_inside ? ' <span class="muted">+' + n(r.items_inside) + ' inside</span>' : "") + '</td><td class="n">' + n(r.photos) + (r.close_ups ? ' <span class="muted">+' + n(r.close_ups) + ' close-ups</span>' : "") + '</td>'
+      + '<td>' + (r.map ? "yes" : "") + '</td><td>' + (r.geo && r.geo.latitude ? "yes" : "") + '</td><td>' + (r.shares && r.shares.length ? n(r.shares.length) : "") + '</td>';
+  }
+  var ROOM_HEAD = '<th>Room</th><th>Scanned</th><th>Changed</th><th class="n">Area</th><th class="n">Walls/doors/windows</th><th class="n">Furniture</th><th class="n">Items</th><th class="n">Photos</th><th>Map</th><th>Location</th><th>Shared</th>';
+  function drawRooms(rooms) {
+    var rows = '<tr><th>Owner</th>' + ROOM_HEAD + '<th></th></tr>';
+    rooms.forEach(function (r, i) {
+      rows += '<tr><td>' + esc(r.owner_email || r.owner) + '</td>' + roomCells(r) + '<td><button class="plain" type="button" data-room="' + esc(r.id) + '" data-room-name="' + esc(r.name) + '">Open</button></td></tr>';
+    });
+    $("rooms").innerHTML = rooms.length ? rows : '<tr><td class="muted">No rooms scanned or changed in the period.</td></tr>';
+    wireRoomButtons($("rooms"));
+  }
+  function wireRoomButtons(root) {
+    root.querySelectorAll("button[data-room]").forEach(function (b) {
+      b.addEventListener("click", function () { showRoom(b.getAttribute("data-room"), b.getAttribute("data-room-name")); });
+    });
+  }
+
+  function showPerson(p) {
+    $("person-box").hidden = false;
+    $("person-title").textContent = "Account: " + (p.email || p.id);
+    $("person").innerHTML = '<p class="muted">Loading…</p>';
+    $("person-box").scrollIntoView({ behavior: "smooth", block: "start" });
+    rpc("insights_person", { person: p.id }).then(function (d) {
+      var a = d.account || {}, plan = d.plan || {};
+      var facts = [["Made", when(a.created)], ["Confirmed", a.confirmed ? "yes" : "no"], ["Last sign-in", ago(a.last_sign_in)],
+        ["Plus", plan.plus ? "yes" : "no"], ["Mapping left", plan.free_seconds_left != null ? Math.round(plan.free_seconds_left / 60) + " min of " + Math.round((plan.free_seconds || 0) / 60) : "–"],
+        ["Minutes bought", n(Math.round((plan.seconds_bought || 0) / 60))], ["Use photos left", plan.plus ? n(plan.use_photos_left) : "–"],
+        ["Promo codes", (d.promo || []).map(function (x) { return x.code; }).join(", ") || "none"],
+        ["Purchases", (d.purchases || []).length ? d.purchases.map(function (x) { return x.minutes + " min" + (x.amount ? " (" + (x.amount / 100).toFixed(2) + " " + (x.currency || "").toUpperCase() + ")" : ""); }).join(", ") : "none"],
+        ["Scans", n((d.scans || []).length) + " (" + n(Math.round((d.scans || []).reduce(function (s, x) { return s + x.seconds; }, 0) / 60)) + " min)"],
+        ["Claude calls", n((d.claude || {}).calls) + (d.claude && d.claude.failed ? ', <span class="bad">' + n(d.claude.failed) + ' failed</span>' : "")],
+        ["Events (30 days)", n(d.events)]];
+      var html = '<div class="facts">' + facts.map(function (f) { return '<div><span>' + esc(f[0]) + ':</span> <span>' + f[1] + '</span></div>'; }).join("") + '</div>';
+      html += '<h4>Rooms</h4>';
+      var rooms = d.rooms || [];
+      html += rooms.length ? '<div class="wrap"><table><tr>' + ROOM_HEAD + '<th></th></tr>' + rooms.map(function (r) { return '<tr>' + roomCells(r) + '<td><button class="plain" type="button" data-room="' + esc(r.id) + '" data-room-name="' + esc(r.name) + '">Open</button></td></tr>'; }).join("") + '</table></div>' : '<p class="muted">No rooms yet.</p>';
+      if ((d.shared_with_me || []).length) {
+        html += '<h4>Rooms shared with this account</h4><div class="wrap"><table><tr><th>Owner</th>' + ROOM_HEAD + '<th></th></tr>' + d.shared_with_me.map(function (r) { return '<tr><td>' + esc(r.owner_email || "") + '</td>' + roomCells(r) + '<td><button class="plain" type="button" data-room="' + esc(r.id) + '" data-room-name="' + esc(r.name) + '">Open</button></td></tr>'; }).join("") + '</table></div>';
+      }
+      if ((d.scans || []).length) {
+        html += '<h4>Scans</h4><div class="wrap"><table><tr><th>When</th><th class="n">Seconds</th><th>Allowed</th></tr>' + d.scans.slice(0, 30).map(function (x) { return '<tr><td>' + esc(when(x.at)) + '</td><td class="n">' + n(x.seconds) + '</td><td>' + (x.allowed ? "yes" : '<span class="bad">no</span>') + '</td></tr>'; }).join("") + '</table></div>';
+      }
+      if ((d.reports || []).length) {
+        html += '<h4>Reports they sent</h4><div class="wrap"><table><tr><th>When</th><th>Kind</th><th>Room</th><th>Text</th><th>Resolved</th></tr>' + d.reports.map(function (x) { return '<tr><td>' + esc(when(x.at)) + '</td><td>' + esc(x.kind) + '</td><td>' + esc(x.room || "") + '</td><td>' + esc(x.text || "") + '</td><td>' + (x.resolved ? "yes" : "") + '</td></tr>'; }).join("") + '</table></div>';
+      }
+      var views = d.views || [];
+      html += '<p class="muted">Looks at this account by admins, this one included: ' + views.map(function (v) { return esc(v.admin) + " (" + esc(v.what) + ", " + esc(ago(v.at)) + ")"; }).join("; ") + '.</p>';
+      $("person").innerHTML = html;
+      wireRoomButtons($("person"));
+    }).catch(function (e) { $("person").innerHTML = '<p class="problem">' + esc(e.message) + '</p>'; });
+  }
+
+  // The plan from above: walls, doors and windows as lines, furniture as boxes, items as dots. Meters to pixels.
+  function planSVG(layout, items) {
+    layout = layout || {};
+    var surfaces = layout.surfaces || [], furniture = layout.furniture || [];
+    var pts = [];
+    function col(t, i) { return [Number(t[i * 4]) || 0, Number(t[i * 4 + 2]) || 0]; }   // a column's x and z
+    function lineOf(s) { var t = s.transform || [], d = s.dimensions || []; if (t.length !== 16) return null; var c = col(t, 3), x = col(t, 0), h = (Number(d[0]) || 0) / 2; return [[c[0] - x[0] * h, c[1] - x[1] * h], [c[0] + x[0] * h, c[1] + x[1] * h]]; }
+    function boxOf(f) { var t = f.transform || [], d = f.dimensions || []; if (t.length !== 16) return null; var c = col(t, 3), x = col(t, 0), z = col(t, 2), w = (Number(d[0]) || 0) / 2, dp = (Number(d[2]) || 0) / 2;
+      return [[c[0] - x[0] * w - z[0] * dp, c[1] - x[1] * w - z[1] * dp], [c[0] + x[0] * w - z[0] * dp, c[1] + x[1] * w - z[1] * dp], [c[0] + x[0] * w + z[0] * dp, c[1] + x[1] * w + z[1] * dp], [c[0] - x[0] * w + z[0] * dp, c[1] - x[1] * w + z[1] * dp]]; }
+    var lines = [], boxes = [], dots = [];
+    surfaces.forEach(function (s) { if (s.kind === "floor") return; var l = lineOf(s); if (l) { lines.push({ kind: s.kind, a: l[0], b: l[1] }); pts.push(l[0], l[1]); } });
+    furniture.forEach(function (f) { var b = boxOf(f); if (b) { boxes.push({ corners: b, category: f.category }); pts.push.apply(pts, b); } });
+    (items || []).forEach(function (i) { if (i.parent_id || !i.position || i.position.length < 3) return; var p = [Number(i.position[0]), Number(i.position[2])]; if (isFinite(p[0]) && isFinite(p[1])) { dots.push({ p: p, name: i.name, taken: !!i.taken_at, inside: false }); pts.push(p); } });
+    if (!pts.length) return '<p class="muted">No plan.</p>';
+    var minX = Math.min.apply(null, pts.map(function (p) { return p[0]; })), maxX = Math.max.apply(null, pts.map(function (p) { return p[0]; }));
+    var minZ = Math.min.apply(null, pts.map(function (p) { return p[1]; })), maxZ = Math.max.apply(null, pts.map(function (p) { return p[1]; }));
+    var pad = 0.5, w = maxX - minX + 2 * pad, h = maxZ - minZ + 2 * pad, scale = 600 / Math.max(w, 0.1), W = 600, H = Math.round(h * scale);
+    function X(x) { return ((x - minX + pad) * scale).toFixed(1); }
+    function Z(z) { return ((z - minZ + pad) * scale).toFixed(1); }
+    var out = '<svg class="plan" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Plan of the room">';
+    boxes.forEach(function (b) { out += '<polygon points="' + b.corners.map(function (c) { return X(c[0]) + "," + Z(c[1]); }).join(" ") + '" fill="var(--accent)" fill-opacity="0.18" stroke="var(--accent)" stroke-width="1"><title>' + esc(b.category || "furniture") + '</title></polygon>'; });
+    lines.forEach(function (l) { var color = l.kind === "door" ? "#c8651b" : l.kind === "window" ? "#2a7fd4" : l.kind === "opening" ? "var(--muted)" : "var(--fg)"; var width = l.kind === "wall" ? 4 : 5;
+      out += '<line x1="' + X(l.a[0]) + '" y1="' + Z(l.a[1]) + '" x2="' + X(l.b[0]) + '" y2="' + Z(l.b[1]) + '" stroke="' + color + '" stroke-width="' + width + '" stroke-linecap="round"' + (l.kind === "opening" ? ' stroke-dasharray="6 4"' : "") + '><title>' + esc(l.kind) + '</title></line>'; });
+    dots.forEach(function (d) { out += '<circle cx="' + X(d.p[0]) + '" cy="' + Z(d.p[1]) + '" r="5" fill="' + (d.taken ? "var(--muted)" : "#e0b400") + '" stroke="var(--fg)" stroke-width="1"><title>' + esc(d.name) + '</title></circle><text x="' + (Number(X(d.p[0])) + 7) + '" y="' + (Number(Z(d.p[1])) + 4) + '">' + esc(d.name) + '</text>'; });
+    out += '<text x="8" y="' + (H - 8) + '" class="muted">' + (w - 2 * pad).toFixed(1) + ' m × ' + (h - 2 * pad).toFixed(1) + ' m</text></svg>';
+    return out;
+  }
+
+  function signPhotos(paths) {
+    paths = paths.filter(function (p, i, a) { return p && a.indexOf(p) === i; });
+    if (!paths.length) return Promise.resolve({});
+    return fetch(SERVICE.url + "/storage/v1/object/sign/photos", {
+      method: "POST", headers: { apikey: SERVICE.key, authorization: "Bearer " + state.token, "content-type": "application/json" },
+      body: JSON.stringify({ paths: paths, expiresIn: 3600 })
+    }).then(function (r) { return r.json(); }).then(function (list) {
+      var map = {};
+      (list || []).forEach(function (e) { if (e && e.signedURL) map[e.path] = SERVICE.url + "/storage/v1" + e.signedURL; });
+      return map;
+    }).catch(function () { return {}; });
+  }
+
+  function showRoom(id, name) {
+    $("room-box").hidden = false;
+    $("room-title").textContent = "Room: " + (name || id);
+    $("room").innerHTML = '<p class="muted">Loading…</p>';
+    $("room-box").scrollIntoView({ behavior: "smooth", block: "start" });
+    rpc("insights_room", { room: id }).then(function (d) {
+      if (!d) { $("room").innerHTML = '<p class="muted">No such room any more.</p>'; return; }
+      var r = d.room, items = d.items || [];
+      var byId = {}; items.forEach(function (i) { byId[String(i.id).toLowerCase()] = i; });
+      var facts = [["Owner", esc(r.owner_email || r.owner)], ["Scanned", esc(r.scanned_at ? when(r.scanned_at) : "never")], ["Changed", esc(when(r.updated_at))],
+        ["Plan edited", esc(r.layout_edited_at ? when(r.layout_edited_at) : "no")], ["Map", r.map ? "yes, " + bytes(r.map_bytes) + (r.map_saved_by ? ", saved by " + esc(r.map_saved_by) : "") : "no"],
+        ["Shared with", (r.shares || []).map(function (s) { return esc(s.email) + (s.can_edit ? " (can change)" : ""); }).join(", ") || "nobody"],
+        ["Visibility", esc(r.visibility)], ["Open reports", n(r.reports_open)]];
+      var g = r.geo || {};
+      if (g.latitude && g.longitude) {
+        var lat = Number(g.latitude).toFixed(5), lon = Number(g.longitude).toFixed(5);
+        facts.push(["Location", lat + ", " + lon + (g.accuracy ? " (±" + Math.round(g.accuracy) + " m)" : "") + (g.bearing != null ? ", facing " + Math.round(g.bearing) + "°" : "")
+          + ' · <a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '#map=19/' + lat + '/' + lon + '" target="_blank" rel="noopener">map</a>'
+          + (r.site ? ' · floor ' + esc(r.site.floor != null ? r.site.floor : "?") + (r.site.apartment ? ", " + esc(r.site.apartment) : "") : "")]);
+      } else {
+        facts.push(["Location", "not recorded"]);
+      }
+      var html = '<div class="facts">' + facts.map(function (f) { return '<div><span>' + esc(f[0]) + ':</span> <span>' + f[1] + '</span></div>'; }).join("") + '</div>';
+      html += planSVG(r.layout, items);
+      var paths = [];
+      items.forEach(function (i) { if (i.photo_path) paths.push(i.photo_path); (i.captures || []).forEach(function (c) { if (c.path) paths.push(c.path); }); });
+      html += '<h4>Things in the room (' + items.length + ')</h4><div class="wrap"><table id="room-items"><tr><th></th><th>Name</th><th>Note</th><th>Kind</th><th>Where</th><th>Position (m)</th><th>Size (m)</th><th>From</th><th>Changed</th></tr>';
+      items.forEach(function (i) {
+        var parent = i.parent_id ? byId[String(i.parent_id).toLowerCase()] : null;
+        var pos = i.position && i.position.length >= 3 ? Number(i.position[0]).toFixed(2) + ", " + Number(i.position[1]).toFixed(2) + ", " + Number(i.position[2]).toFixed(2) : "–";
+        var size = i.size && i.size.length >= 3 ? i.size.map(function (v) { return Number(v).toFixed(2); }).join(" × ") : "–";
+        html += '<tr><td>' + (i.photo_path ? '<img class="thumb" data-photo="' + esc(i.photo_path) + '" alt="">' : "") + '</td><td>' + esc(i.name) + (i.taken_at ? ' <span class="muted">(taken)</span>' : "") + ((i.contents || []).length ? ' <span class="muted">' + n(i.contents.length) + ' listed</span>' : "") + '</td>'
+          + '<td class="muted">' + esc(i.note || "") + (i.feel ? ' <em>' + esc(i.feel) + '</em>' : "") + '</td><td>' + esc(i.category || "") + '</td><td>' + (parent ? "in " + esc(parent.name) : esc(i.room || "")) + '</td><td class="n">' + pos + '</td><td class="n">' + size + '</td>'
+          + '<td class="muted">' + esc(i.source || "") + (i.placement ? " / " + esc(i.placement) : "") + (i.confidence != null && i.source !== "web" ? " " + Math.round(i.confidence * 100) + "%" : "") + '</td><td class="muted">' + esc(ago(i.updated)) + (i.updated_by ? " by " + esc(i.updated_by) : "") + '</td></tr>';
+      });
+      html += '</table></div>';
+      var withCaptures = items.filter(function (i) { return (i.captures || []).length; });
+      if (withCaptures.length) {
+        html += '<h4>Close-ups</h4>';
+        withCaptures.forEach(function (i) {
+          var inside = items.filter(function (x) { return x.parent_id && String(x.parent_id).toLowerCase() === String(i.id).toLowerCase(); });
+          html += '<p><strong>' + esc(i.name) + '</strong> <span class="muted">' + n(inside.length) + ' things found inside: ' + esc(inside.map(function (x) { return x.name; }).join(", ")) + '</span></p><div class="thumbs">'
+            + i.captures.map(function (c) { return '<figure><img data-photo="' + esc(c.path) + '" alt=""><figcaption>' + esc(c.taken_at ? when(c.taken_at) : "") + (c.width ? " · " + c.width + "×" + c.height : "") + '</figcaption></figure>'; }).join("") + '</div>';
+        });
+      }
+      if ((d.reports || []).length) {
+        html += '<h4>Reports from this room</h4><div class="wrap"><table><tr><th>When</th><th>Kind</th><th>Who</th><th>Text</th><th>Resolved</th></tr>' + d.reports.map(function (x) { return '<tr><td>' + esc(when(x.at)) + '</td><td>' + esc(x.kind) + '</td><td>' + esc(x.reporter || "") + '</td><td>' + esc(x.text || "") + '</td><td>' + (x.resolved ? "yes" : "") + '</td></tr>'; }).join("") + '</table></div>';
+      }
+      html += '<p class="muted">This look at the room is recorded under its owner\'s account.</p>';
+      $("room").innerHTML = html;
+      signPhotos(paths).then(function (urls) {
+        $("room").querySelectorAll("img[data-photo]").forEach(function (img) { var u = urls[img.getAttribute("data-photo")]; if (u) img.src = u; else img.alt = "no photo"; });
+      });
+    }).catch(function (e) { $("room").innerHTML = '<p class="problem">' + esc(e.message) + '</p>'; });
+  }
+
   function drawCatalog() {
     $("catalog-list").innerHTML = Object.keys(CATALOG).map(function (k) { return '<dt>' + esc(k) + '</dt><dd>' + esc(CATALOG[k]) + '</dd>'; }).join("");
   }
@@ -339,9 +518,9 @@
     var days = Number($("days").value) || 30;
     $("status").textContent = "Loading…";
     $("problem").hidden = true;
-    return Promise.all([rpc("insights_overview", { days: days }), rpc("insights_people", { days: days, most: 300 })]).then(function (r) {
+    return Promise.all([rpc("insights_overview", { days: days }), rpc("insights_people", { days: days, most: 300 }), rpc("insights_rooms", { days: days, most: 300 })]).then(function (r) {
       state.overview = r[0]; state.people = r[1];
-      drawOverview(state.overview); drawPeople(state.people);
+      drawOverview(state.overview); drawPeople(state.people); drawRooms(r[2] || []);
       $("status").textContent = "As of " + when(state.overview.now) + ".";
     }).catch(function (e) {
       $("status").textContent = "";
