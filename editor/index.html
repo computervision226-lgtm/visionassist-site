@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VisionAssist Rooms</title>
+<title>Whereabouts Rooms</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Barlow+Semi+Condensed:wght@600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap">
@@ -545,7 +545,7 @@ button { cursor: pointer; }
   <form class="signin-card" id="signin-form" novalidate>
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="5.5"/><path d="M10 1v4M10 15v4M1 10h4M15 10h4"/></svg></span>
-      <span class="brand-name" data-i18n="VisionAssist Rooms">VisionAssist Rooms</span>
+      <span class="brand-name" data-i18n="Whereabouts Rooms">Whereabouts Rooms</span>
     </div>
     <div>
       <h1 data-i18n="See and edit the rooms your iPhone scanned">See and edit the rooms your iPhone scanned</h1>
@@ -950,7 +950,7 @@ function applyLanguage() {
   const root = document.documentElement;
   root.lang = LANG;
   root.dir = LANG === "ar" ? "rtl" : "ltr";
-  document.title = tr("VisionAssist Rooms");
+  document.title = tr("Whereabouts Rooms");
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = tr(el.dataset.i18n); });
   for (const [data, attribute] of [["i18nPlaceholder", "placeholder"], ["i18nAriaLabel", "aria-label"], ["i18nTitle", "title"]]) {
     const selector = "[data-" + data.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()) + "]";
@@ -1148,7 +1148,7 @@ const AR = {
   "Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.": "اسأل عمّا في %@: أين الأشياء، وما الذي يمكن تسهيل العثور عليه، وما يوجد عادةً في غرفة كهذه، وأين الازدحام. تأتي الإجابات من الغرفة كما هي مدرجة هنا.",
   "Thinking…": "جارٍ التفكير…",
   "Sign in again to ask.": "سجّل الدخول مرة أخرى لتسأل.",
-  "The assistant needs VisionAssist Plus, like Claude in Use: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى VisionAssist Plus، مثل Claude في الاستخدام: في التطبيق، رمز الترس، ثم Claude، ثم احصل على Plus. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
+  "The assistant needs Whereabouts Plus, like Claude in Find: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى Whereabouts Plus، مثل Claude في البحث: في التطبيق، رمز الترس، ثم Claude، ثم احصل على Plus. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
   "This month's Claude allowance is used up. It starts again next month.": "استُنفدت حصة Claude لهذا الشهر. تبدأ من جديد الشهر القادم.",
   "Claude isn't set up in this cloud yet.": "لم يُعدّ Claude في هذه السحابة بعد.",
   "Busy for a moment: try again.": "مشغول للحظة: حاول مرة أخرى.",
@@ -1362,8 +1362,8 @@ const AR = {
   "Share with": "المشاركة مع",
   "shared": "مشاركة",
   "Shared with": "مشاركة مع",
-  "Shared with %@. It's on their phone once they sign in to VisionAssist with that email, and they can change what's in it.": "تمت المشاركة مع %@. ستظهر على هواتفهم عندما يسجّلون الدخول إلى VisionAssist بهذا البريد، ويمكنهم تغيير ما فيها.",
-  "Shared with %@. It's on their phone once they sign in to VisionAssist with that email.": "تمت المشاركة مع %@. ستظهر على هواتفهم عندما يسجّلون الدخول إلى VisionAssist بهذا البريد.",
+  "Shared with %@. It's on their phone once they sign in to Whereabouts with that email, and they can change what's in it.": "تمت المشاركة مع %@. ستظهر على هواتفهم عندما يسجّلون الدخول إلى Whereabouts بهذا البريد، ويمكنهم تغيير ما فيها.",
+  "Shared with %@. It's on their phone once they sign in to Whereabouts with that email.": "تمت المشاركة مع %@. ستظهر على هواتفهم عندما يسجّلون الدخول إلى Whereabouts بهذا البريد.",
   "Shared with you": "مشاركة معك",
   "Shared with you to edit": "مشاركة معك للتعديل",
   "Show on the map": "اعرضها على الخريطة",
@@ -1462,7 +1462,7 @@ const AR = {
   "Upstairs": "الطابق العلوي",
   "USB charger": "شاحن USB",
   "View": "العرض",
-  "VisionAssist Rooms": "غرف VisionAssist",
+  "Whereabouts Rooms": "غرف Whereabouts",
   "Wall": "جدار",
   "Wall clock": "ساعة حائط",
   "What it is": "ما هو",
@@ -3427,7 +3427,7 @@ function chatProblem(status, body) {
   const type = body?.error?.type;
   if (status === 401) return tr("Sign in again to ask.");
   if (type === "demo_limit") return tr("The sample room's assistant has answered enough for today. Sign in to ask about your own rooms.");
-  if (type === "needs_plus") return tr("The assistant needs VisionAssist Plus, like Claude in Use: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.");
+  if (type === "needs_plus") return tr("The assistant needs Whereabouts Plus, like Claude in Find: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.");
   if (type === "monthly_limit") return tr("This month's Claude allowance is used up. It starts again next month.");
   if (type === "not_set_up") return tr("Claude isn't set up in this cloud yet.");
   if (status === 429 || type === "busy") return tr("Busy for a moment: try again.");
@@ -6921,8 +6921,8 @@ async function addShare() {
   }
   if (state.room?.id !== room.id) return;
   if ($("share-email")) $("share-email").value = "";
-  flash(state.shareCanEdit ? tr("Shared with %@. It's on their phone once they sign in to VisionAssist with that email, and they can change what's in it.", email)
-    : tr("Shared with %@. It's on their phone once they sign in to VisionAssist with that email.", email));
+  flash(state.shareCanEdit ? tr("Shared with %@. It's on their phone once they sign in to Whereabouts with that email, and they can change what's in it.", email)
+    : tr("Shared with %@. It's on their phone once they sign in to Whereabouts with that email.", email));
   await loadShares(room.id);
   $("share-email")?.focus();
 }

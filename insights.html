@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Insights – VisionAssist</title>
-<meta name="description" content="For whoever runs VisionAssist: who signs up and how far they get, what works and what doesn't, what Claude costs, and what's stored.">
+<title>Insights – Whereabouts</title>
+<meta name="description" content="For whoever runs Whereabouts: who signs up and how far they get, what works and what doesn't, what Claude costs, and what's stored.">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="site.css">
 <style>
@@ -62,7 +62,7 @@
 <a class="skip" href="#main">Skip to the insights</a>
 <header class="top">
   <div class="inner">
-    <a class="brand" href="index.html">VisionAssist</a>
+    <a class="brand" href="index.html">Whereabouts</a>
     <nav class="site" aria-label="Site">
       <ul>
         <li><a href="index.html">Get the app</a></li>
@@ -76,7 +76,7 @@
 
 <main id="main">
   <h1>Insights</h1>
-  <p class="lead">Who signs up and how far they get, what works and what doesn't, what Claude costs, and what's stored. For whoever runs this VisionAssist: sign in with an account listed as an admin.</p>
+  <p class="lead">Who signs up and how far they get, what works and what doesn't, what Claude costs, and what's stored. For whoever runs this Whereabouts: sign in with an account listed as an admin.</p>
 
   <section id="signin">
     <form class="signin" id="signin-form" novalidate>
@@ -121,7 +121,7 @@
     <div class="wrap"><table id="features"><caption class="muted">Events by kind</caption></table></div>
 
     <h3>Commands not understood</h3>
-    <p class="muted">What people said in Use that the app couldn't act on: the raw material for new phrasings.</p>
+    <p class="muted">What people said in Find that the app couldn't act on: the raw material for new phrasings.</p>
     <div class="wrap"><table id="not-understood"></table></div>
 
     <h3>Errors</h3>
@@ -177,7 +177,7 @@
   var CATALOG = {
     "app.open": "The app was opened or came back to the front: version, language, whether VoiceOver is on.",
     "screen.home": "The home screen (the list of rooms) was shown.",
-    "screen.scan": "The scanning screen was opened.", "screen.use": "Use was opened.", "screen.contribute": "Pin places by hand was opened.",
+    "screen.scan": "The scanning screen was opened.", "screen.use": "Find was opened.", "screen.contribute": "Add by hand was opened.",
     "screen.settings": "Settings was opened.", "screen.plus": "The Minutes and Plus screen was opened.", "screen.account": "The account screen was opened.",
     "account.signup": "An account was created (ok: signed in at once; not ok: the email must be confirmed first, or it failed: error).",
     "account.confirmed": "The email was confirmed (how: code, link or by itself).", "account.signin": "A sign-in (ok or the error).",
@@ -187,20 +187,22 @@
     "scan.finished": "A scan ended and was saved: seconds, rooms, walls, furniture, items, close-ups, photos Claude saw, whether the free time ran out (time_up), whether naming was skipped.",
     "scan.cancelled": "A scan was stopped without saving (seconds).", "scan.failed": "A scan failed (error).",
     "screen.scan_intro": "The walkthrough before the first scan was shown.",
+    "screen.welcome": "The welcome on the first launch was shown.", "welcome.done": "Get started was tapped on the welcome.",
+    "welcome.sample": "See a sample room was tapped on the welcome.",
     "scan.coverage": "Done was tapped too soon: what was advised first (advice: gap, wall, door).",
     "scan.paused": "The scan was paused (seconds so far).", "scan.resumed": "The scan went on after a pause.",
     "scan.thermal": "The phone got hot (hot: true) or cooled down during a scan; items and photos rest while hot.",
     "scan.tag_started": "Name this was tapped (pointed: whether a spot was found).",
     "scan.tag": "A name was said for a thing (ok; words), or nothing usable was heard (why).",
     "scan.tags_applied": "When the scan was saved: names that renamed a thing found there (renamed) or became a place of their own (added).",
-    "use.started": "Use began in a room.", "use.located": "The phone recognized where it was (ok) or gave up (seconds it tried).",
+    "use.started": "Find began in a room.", "use.located": "The phone recognized where it was (ok) or gave up (seconds it tried).",
     "use.find": "Someone asked for a thing (how: voice or list; ok: the app knew where it was).",
     "use.arrived": "They were brought to the thing: ok when the last half meter found it, not when it gave up.",
     "use.took": "They said they took it, or put it somewhere (action).", "use.label": "A label was read (ok: legible).",
     "use.where": "Where am I.", "use.door": "Take me to the door, or another room.",
     "use.command": "A spoken command: ok when understood (kind), not when it wasn't (text: what was said).",
     "use.report": "Something reported to the family (kind).",
-    "contribute.pinned": "A place was pinned by hand.",
+    "contribute.pinned": "A place was added by hand.",
     "contribute.rescan_looked": "Scan this spot again: Claude looked (found, added, moved, seen).",
     "contribute.rescan": "Scan this spot again was saved (added, moved), or not taken (why: person).",
     "plus.buy": "Buy minutes or Get Plus was tapped (what).", "plus.paid": "A payment reached the account (what, minutes).",
