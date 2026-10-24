@@ -706,7 +706,8 @@ const FURNITURE_NAMES = { storage: "Cabinet", refrigerator: "Refrigerator", stov
   washerDryer: "Washer or dryer", toilet: "Toilet", bathtub: "Bathtub", oven: "Oven", dishwasher: "Dishwasher",
   table: "Table", sofa: "Sofa", chair: "Chair", fireplace: "Fireplace", television: "TV", stairs: "Stairs" };
 const SOURCE_TEXT = { roomPlan: N_("Furniture measured by the scan"), detector: N_("Found by the phone"), ai: N_("Named by Claude"),
-  web: N_("Added here"), manual: N_("Pinned by hand on the phone"), voice: N_("Put down on the phone, said aloud") };
+  web: N_("Added here"), manual: N_("Pinned by hand on the phone"), voice: N_("Put down on the phone, said aloud"),
+  named: N_("Named aloud during the scan") };
 const PLACEMENT_TEXT = { lidar: N_("measured with LiDAR"), surface: N_("pinned on a surface"), estimated: N_("a rough pin from the phone"),
   plan: N_("picked on this plan") };
 const CATEGORY_NAMES = { furniture: N_("Furniture"), appliance: N_("Appliance"), electronics: N_("Electronics"), kitchenware: N_("Kitchenware"),
@@ -1304,6 +1305,19 @@ const AR = {
   "Placed here on the map.": "وُضعت هنا على الخريطة.",
   "Plan": "المخطط",
   "Plan changed": "آخر تعديل للمخطط",
+  "Previous scan": "المسح السابق",
+  "Restore previous scan": "استعادة المسح السابق",
+  "Confirm restore": "تأكيد الاستعادة",
+  "Go back to the scan of %@?": "العودة إلى مسح %@؟",
+  "Its walls, furniture, items and map come back, and this scan is kept instead, so you can switch back. The phones take it at their next sync.": "تعود جدرانه وأثاثه وأغراضه وخريطته، ويُحتفظ بهذا المسح بدلًا منه، فيمكنك العودة إليه. تأخذه الهواتف في مزامنتها التالية.",
+  "Restore": "استعادة",
+  "Keep this one": "أبقِ هذا",
+  "Restoring the previous scan…": "جارٍ استعادة المسح السابق…",
+  "There's no earlier scan of this room to go back to.": "لا يوجد مسح أقدم لهذه الغرفة للعودة إليه.",
+  "The previous scan is back. The phones take it at their next sync.": "عاد المسح السابق. تأخذه الهواتف في مزامنتها التالية.",
+  "Named aloud during the scan": "سُمّي بصوت عالٍ أثناء المسح",
+  "On": "على",
+  "as the scan measured it": "كما قاسه المسح",
   "Plant": "نبات",
   "Position": "الموضع",
   "Private": "خاصة",
@@ -1730,6 +1744,8 @@ const state = {
   tool: "select",        // while it is: select, wall, door, opening, window or furniture
   shape: null,           // a wall, door, window or opening picked then ({ list: "surfaces", id }), or furniture with no item ({ list: "furniture", id })
   confirmingDelete: false,
+  confirmingRestore: false,   // "Restore previous scan" asked, not yet confirmed
+  restoring: false,
   unsaved: new Set(),     // item IDs (and "room:" + room ID) with changes not saved yet
   loadError: null,       // why the rooms or the room couldn't be read
   openTicket: 0,         // bumped by every open and close, so a slow open that's been overtaken stops
@@ -2086,6 +2102,7 @@ function openRoomData(room, items) {
   state.selectedId = null;
   state.confirmingDelete = false;
   state.confirmingPublic = false;
+  state.confirmingRestore = false;
   if (state.shares?.roomId !== room.id) state.shares = null;
   setPlacing(null);
   planView.fitNext = true;
@@ -2832,6 +2849,47 @@ function containerOf(item) {
   const key = idKey(item.parent_id);
   return state.items.find((i) => idKey(i.id) === key) || null;
 }
+
+/** The piece of furniture a thing rests on (the keys on the hall table), as the scan measured it, if it's still here. */
+function supportOf(item) {
+  if (!item?.rests_on) return null;
+  const key = idKey(item.rests_on);
+  return state.items.find((i) => idKey(i.id) === key) || null;
+}
+
+/** The scan before the current one, kept in the cloud: when it was made, and Restore (two clicks). */
+function previousScanHTML(room) {
+  if (!room?.previous_scanned_at || state.mode !== "remote") return "";
+  const when = fmtWhen(room.previous_scanned_at);
+  if (!canEdit()) return `<div class="fact"><dt>${tr("Previous scan")}</dt><dd>${esc(when)}</dd></div>`;
+  if (state.confirmingRestore) {
+    return `<div class="fact"><dt>${tr("Previous scan")}</dt><dd>
+      <div class="confirm" role="alertdialog" aria-label="${tr("Confirm restore")}">
+        <strong>${esc(tr("Go back to the scan of %@?", when))}</strong>
+        <span class="help">${tr("Its walls, furniture, items and map come back, and this scan is kept instead, so you can switch back. The phones take it at their next sync.")}</span>
+        <div class="row"><button type="button" class="btn solid" id="insp-restore-yes">${tr("Restore")}</button><button type="button" class="btn" id="insp-restore-no">${tr("Keep this one")}</button></div>
+      </div></dd></div>`;
+  }
+  return `<div class="fact"><dt>${tr("Previous scan")}</dt><dd>${esc(when)} <button type="button" class="btn ghost" id="insp-restore">${tr("Restore previous scan")}</button></dd></div>`;
+}
+
+/** Brings back the scan before the current one (the two swap). */
+async function restorePreviousScan() {
+  if (!state.room || !canEdit() || state.restoring) return;
+  const roomId = state.room.id;
+  state.restoring = true;
+  state.confirmingRestore = false;
+  setStatus("saving", tr("Restoring the previous scan…"));
+  const { data, error } = await state.client.rpc("restore_previous_scan", { room: roomId });
+  state.restoring = false;
+  if (error || !data) {
+    usage.log("editor.restore_scan", { ok: false, error: friendlyError(error || new Error("nothing to restore")) });
+    setStatus("error", error ? friendlyError(error) : tr("There's no earlier scan of this room to go back to."));
+    return;
+  }
+  usage.log("editor.restore_scan", { ok: true });
+  if (state.room?.id === roomId) openRoom(roomId, { note: tr("The previous scan is back. The phones take it at their next sync.") });
+}
 const isInside = (item) => !!containerOf(item);
 /** The things found inside an item, in reading order on its close-ups
  *  (photo by photo, row by row, left to right), as the phone numbers them. */
@@ -3081,6 +3139,7 @@ function buildInspector() {
         ${state.room.scanned_at ? `<div class="fact"><dt>${tr("Scanned")}</dt><dd>${esc(fmtWhen(state.room.scanned_at))}</dd></div>` : ""}
         ${mapUpdatedText(state.room) ? `<div class="fact"><dt>${tr("Map updated")}</dt><dd>${esc(mapUpdatedText(state.room))}</dd></div>` : ""}
         ${state.room.layout_edited_at ? `<div class="fact"><dt>${tr("Plan changed")}</dt><dd>${esc(fmtWhen(state.room.layout_edited_at))}</dd></div>` : ""}
+        ${previousScanHTML(state.room)}
       </dl></div>` : mapUpdatedText(state.room) ? `<div class="facts"><dl style="margin:0;display:grid;gap:6px"><div class="fact"><dt>${tr("Map updated")}</dt><dd>${esc(mapUpdatedText(state.room))}</dd></div></dl></div>` : ""}
       ${state.view === "map" ? "" : `<div class="summary-grid">${tiles}</div>`}
       ${whereHTML(state.room)}
@@ -3149,6 +3208,7 @@ function buildInspector() {
       ${item.taken_at ? `<div class="fact"><dt>${tr("Taken")}</dt><dd>${esc(fmtWhen(item.taken_at))}${ro ? "" : ` <button type="button" class="btn ghost" id="insp-put-back">${tr("It's back")}</button>`}
         <br><span class="help">${tr("Said on the phone: taken from where it's pinned. If it's there again, click It's back.")}</span></dd></div>` : ""}
       ${conf || seenAs ? `<div class="fact"><dt>${tr("Recognized")}</dt><dd>${[conf, seenAs].filter(Boolean).join(LANG === "ar" ? "، " : ", ")} ${isLow(item) ? `<span class="badge low">${tr("check the name")}</span>` : ""}</dd></div>` : ""}
+      ${(() => { const on = supportOf(item); return on ? `<div class="fact"><dt>${tr("On")}</dt><dd><button type="button" class="link-btn" data-select="${esc(on.id)}">${esc(on.name || tr("a place"))}</button> <span class="help">${tr("as the scan measured it")}</span></dd></div>` : ""; })()}
       ${size ? `<div class="fact"><dt>${tr("Size")}</dt><dd class="data">${container || Math.max(...size) < 0.5 ? esc(fmtCm(size) || "") : tr("%@ m", size.map((v) => v.toFixed(2)).join(" × "))}</dd></div>` : ""}
       ${pos && floor != null ? `<div class="fact"><dt>${tr("Height")}</dt><dd class="data">${tr("%@ above the floor", fmtM(Math.max(0, pos[1] - floor)))}</dd></div>` : ""}
       ${pos ? `<div class="fact"><dt>${tr("Position")}</dt><dd><span class="data" dir="ltr">x ${pos[0].toFixed(2)} · y ${pos[1].toFixed(2)} · z ${pos[2].toFixed(2)}</span>${own(PLACEMENT_TEXT, item.placement) ? `<br><span class="help">${tr(PLACEMENT_TEXT[item.placement])}</span>` : ""}</dd></div>` : `<div class="fact"><dt>${tr("Position")}</dt><dd>${tr("Not placed yet")}</dd></div>`}
@@ -7159,6 +7219,9 @@ function wireEvents() {
     const unshare = e.target.closest("[data-unshare]");
     if (unshare) { removeShare(unshare.dataset.unshare); return; }
     if (e.target.closest("#where-show")) { setView("map"); return; }
+    if (e.target.closest("#insp-restore")) { state.confirmingRestore = true; renderInspector(); $("insp-restore-yes")?.focus(); return; }
+    if (e.target.closest("#insp-restore-no")) { state.confirmingRestore = false; renderInspector(); $("insp-restore")?.focus(); return; }
+    if (e.target.closest("#insp-restore-yes")) { restorePreviousScan(); return; }
     if (e.target.closest("#site-pick")) { mapView.startPicking(); return; }
     if (e.target.closest("#site-coords-go")) { placeAtTyped(); return; }
     if (e.target.closest("#site-reset")) { editSite((site) => { delete site.placement; }); return; }
