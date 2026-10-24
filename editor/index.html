@@ -514,6 +514,7 @@ button { cursor: pointer; }
 .plan-room-name.cursive { letter-spacing: 0; }
 
 /* ---------- Narrow screens ---------- */
+.hosted-wait { margin: 3rem 1.2rem; text-align: center; color: var(--muted, #666); }
 @media (max-width: 1100px) {
   #workspace { grid-template-columns: 280px minmax(0, 1fr); grid-template-areas: "top top" "side stage"; }
   .account { display: none; }
@@ -539,6 +540,7 @@ button { cursor: pointer; }
 </head>
 <body>
 
+<p id="hosted-wait" class="hosted-wait" hidden data-i18n="Connecting to your account…">Connecting to your account…</p>
 <section id="signin" hidden>
   <form class="signin-card" id="signin-form" novalidate>
     <div class="brand">
@@ -772,6 +774,7 @@ const usage = {
    *  (never asked of the client itself, whose answer can wait on its own refresh). */
   refreshToken() {
     if (!state.client) { this.token = null; return; }
+    if (typeof host !== "undefined" && host.on) { this.token = host.token; return; }
     try {
       this.token = JSON.parse(store.get("va.auth") || "null")?.access_token || null;
     } catch { this.token = null; }
@@ -804,6 +807,69 @@ const usage = {
 usage.load();
 if (usage.queue.length) setTimeout(() => usage.flush(), 3000);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") usage.flush(); });
+
+// ----- In the app: the same editor inside VisionAssist on the phone -----
+// Opened in the app's own web view (the address ends in #app), the editor
+// asks nobody to sign in: the app hands it the account's access token, and a
+// fresh one before it runs out, and the client sends that token with every
+// request. No session is kept in the web view's storage. The app's button
+// closes it; sign-out is the app's business.
+const host = {
+  on: location.hash === "#app" && !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.visionassist),
+  token: null, user: null, waiting: [],
+  post(message) { try { window.webkit.messageHandlers.visionassist.postMessage(message); } catch { /* not in the app */ } },
+  /** The app answers through window.vaHost.session({ token, id, email }), or { error }. */
+  session(given) {
+    this.token = given && given.token ? String(given.token) : null;
+    if (given && given.id) this.user = { id: String(given.id), email: String(given.email || "") };
+    if (this.token && state.client && state.client.realtime) { try { state.client.realtime.setAuth(this.token); } catch { /* not yet connected */ } }
+    usage.token = this.token;
+    const waiting = this.waiting;
+    this.waiting = [];
+    waiting.forEach((resolve) => resolve(this.token));
+  },
+  /** A token from the app: the next one it sends (within a few seconds), else the one it has. */
+  fresh() {
+    return new Promise((resolve) => {
+      this.waiting.push(resolve);
+      this.post({ type: "session" });
+      setTimeout(() => { const i = this.waiting.indexOf(resolve); if (i >= 0) { this.waiting.splice(i, 1); resolve(this.token); } }, 5000);
+    });
+  },
+  /** The client's fetch: the app's token on every request; refused as stale, a fresh one and once more. */
+  async fetch(input, init) {
+    const withToken = (token) => {
+      const headers = new Headers(init && init.headers ? init.headers : (input instanceof Request ? input.headers : undefined));
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      return fetch(input, Object.assign({}, init, { headers }));
+    };
+    const response = await withToken(host.token);
+    if (response.status !== 401) return response;
+    const token = await host.fresh();
+    return token && token !== host.token ? withToken(token) : (token ? withToken(token) : response);
+  },
+};
+window.vaHost = { session: (given) => host.session(given) };
+
+/** Inside the app: the account's editor, with no signing in. */
+async function startHosted() {
+  $("signin").hidden = true;
+  $("hosted-wait").hidden = false;
+  const service = chatService();
+  const token = await host.fresh();
+  if (!service || !token || !host.user) {
+    $("hosted-wait").textContent = tr("Sign in to the cloud in the app first (gear icon, Account), then open the editor again.");
+    return;
+  }
+  const client = window.supabase.createClient(service.url, service.key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: (input, init) => host.fetch(input, init) },
+  });
+  try { client.realtime.setAuth(token); } catch { /* set once it connects */ }
+  $("hosted-wait").hidden = true;
+  usage.token = token;
+  await startRemote(client, host.user);
+}
 
 // ----- Language: English, or Arabic (right to left) -----
 // The editor is in the language picked with its العربية / English button, or
@@ -1153,6 +1219,8 @@ const AR = {
   "Last edited": "آخر تعديل",
   "Latitude, longitude, as any map app copies them.": "خط العرض، خط الطول، كما ينسخهما أي تطبيق خرائط.",
   "Leave the sample": "الخروج من العيّنة",
+  "Connecting to your account…": "جارٍ الاتصال بحسابك…",
+  "Sign in to the cloud in the app first (gear icon, Account), then open the editor again.": "سجّل الدخول إلى السحابة في التطبيق أولًا (رمز الترس، الحساب)، ثم افتح المحرر مرة أخرى.",
   "left drawer": "الدرج الأيسر",
   "Length (cm)": "الطول (سم)",
   "Lighting": "إضاءة",
@@ -1799,7 +1867,7 @@ function startDemo() {
 function showAccount() {
   $("account").textContent = state.user?.email || "";
   $("sign-out").title = state.user?.email ? tr("Signed in as %@", state.user.email) : "";
-  $("sign-out").textContent = state.mode === "demo" ? tr("Leave the sample") : tr("Sign out");
+  $("sign-out").textContent = state.mode === "demo" ? tr("Leave the sample") : host.on ? tr("Close") : tr("Sign out");
 }
 
 function showWorkspace() {
@@ -3323,8 +3391,7 @@ async function chatSend(text) {
   try {
     const headers = { apikey: service.key, "content-type": "application/json" };
     if (!demo) {
-      const { data } = await state.client.auth.getSession();
-      const token = data?.session?.access_token;
+      const token = host.on ? host.token : (await state.client.auth.getSession()).data?.session?.access_token;
       if (!token) throw { status: 401 };
       headers.authorization = `Bearer ${token}`;
     }
@@ -6938,7 +7005,11 @@ function wireEvents() {
   $("signin-form").addEventListener("submit", signIn);
   $("demo-button").addEventListener("click", startDemo);
   document.querySelectorAll("[data-lang-switch]").forEach((button) => button.addEventListener("click", () => setLanguage(LANG === "ar" ? "en" : "ar")));
-  $("sign-out").addEventListener("click", signOut);
+  $("sign-out").addEventListener("click", () => {
+    // (In the app, the button closes the editor: what's unsaved goes first, and the app stays signed in.)
+    if (host.on && state.mode === "remote") { flushSaves().then(() => usage.flush()).then(() => host.post({ type: "close" })); return; }
+    signOut();
+  });
   $("view-plan").addEventListener("click", () => setView("plan"));
   $("view-3d").addEventListener("click", () => setView("3d"));
   $("view-map").addEventListener("click", () => setView("map"));
@@ -7230,6 +7301,7 @@ async function boot() {
   $("cfg-email").value = store.get(STORAGE_KEYS.email) || "";
   const params = new URLSearchParams(location.search);
   if (params.has("demo") || location.hash === "#sample") { startDemo(); return; }
+  if (host.on) { await startHosted(); return; }
   const url = service ? SERVICE.url : store.get(STORAGE_KEYS.url), key = service ? SERVICE.key : store.get(STORAGE_KEYS.key);
   if (url && key && window.supabase) {
     try {
