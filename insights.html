@@ -56,6 +56,13 @@
   .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.3rem 1.2rem; margin: 0.5rem 0 1rem; font-size: 0.95rem; }
   .facts div span:first-child { color: var(--muted); }
   .catalog dd { margin: 0 0 0 0; color: var(--muted); }
+  .talk { border-left: 3px solid var(--rule); padding-left: 0.8rem; margin: 0.3rem 0 1.1rem; max-width: 46rem; }
+  .talk .q { font-weight: 600; margin: 0.6rem 0 0.15rem; }
+  .talk .q time { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; margin-inline-end: 0.5rem; }
+  .talk .a { margin: 0 0 0.3rem; white-space: pre-wrap; }
+  .talk .a.refused { color: var(--muted); }
+  .talk .a .bad { white-space: normal; }
+  .talk .use { color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -134,6 +141,21 @@
     <p class="muted" id="claude-note"></p>
     <div class="wrap"><table id="claude"></table></div>
 
+    <h2 id="h-assistant">What the assistant was asked</h2>
+    <p class="muted">Every question to the room assistant in the period, in the editor's <strong>Ask</strong> and in the sample room, with its answer or why there was none, newest conversation first. Kept for a while (<code>service_settings.assistant_trail_days</code>, 90 to start with; 0 keeps nothing); the privacy policy says so. Search finds a word in a question or an answer.</p>
+    <form id="assistant-form" class="bar-top">
+      <label for="assistant-which">Show</label>
+      <select id="assistant-which">
+        <option value="">everyone</option>
+        <option value="accounts">accounts</option>
+        <option value="demo">the sample room</option>
+      </select>
+      <input id="assistant-search" type="search" placeholder="a word in a question or answer" style="min-width: 16rem" aria-label="Search the questions and answers">
+      <button class="plain" type="submit">Show</button>
+      <span class="status" id="assistant-status" aria-live="polite"></span>
+    </form>
+    <div id="assistant"></div>
+
     <h2>What's stored</h2>
     <p class="muted">Everything the service holds, as of now. The events this page reads are kept for 180 days; the rest for as long as the account exists (the privacy policy says what each is).</p>
     <div class="tiles" id="tiles-stored"></div>
@@ -164,7 +186,7 @@
     </details>
 
     <h2 id="catalog">What each event means</h2>
-    <p class="muted">What the app, the editor and the website send, and the details each carries. Nothing else is collected: no names of items, no photos, no addresses; what was said is kept only when the app didn't understand it.</p>
+    <p class="muted">What the app, the editor and the website send, and the details each carries. Nothing else is collected as events: no names of items, no photos, no addresses; what was said is kept only when the app didn't understand it. (The assistant's questions and answers are kept apart, above.)</p>
     <dl class="catalog" id="catalog-list"></dl>
   </section>
 </main>
@@ -293,6 +315,7 @@
       + tile("photos", n(s.photos), bytes(s.photo_bytes))
       + tile("events", n(s.events), s.events_oldest ? "since " + when(s.events_oldest) : "")
       + tile("Claude calls", n(s.claude_calls), "ever")
+      + tile("assistant questions", n(s.assistant_chats), s.assistant_trail_days ? "kept " + n(s.assistant_trail_days) + " days" : "not being kept")
       + tile("open reports", n(s.reports_open), n(s.push_phones) + " phones with alerts");
   }
 
@@ -366,6 +389,54 @@
     }).catch(function (e) { $("trail").innerHTML = '<p class="problem">' + esc(e.message) + '</p>'; });
   }
 
+  // ----- The assistant's trail: questions and answers, as conversations -----
+  var REFUSED = { needs_plus: "refused: needs Plus", demo_limit: "refused: the sample room's limit for today", monthly_limit: "refused: the month's Claude allowance is used up",
+    busy: "busy: asked to try again", timeout: "Claude took too long", unreachable: "couldn't reach Claude", not_set_up: "Claude isn't set up", unauthorized: "not signed in",
+    bad_request: "a bad request", server: "a server error", free_used: "refused: mapping minutes used up" };
+  /** Rows (newest first) as conversations: one person (or one visitor) in one room, from a first question on, newest conversation first. */
+  function talks(rows) {
+    var list = [], open = {};
+    rows.slice().reverse().forEach(function (r) {
+      var key = (r.demo ? "visitor:" + (r.visitor || "?") : "person:" + (r.person || r.email || "?")) + "|" + (r.room || "");
+      var t = open[key], at = new Date(r.at).getTime();
+      if (!t || (r.turn != null && t.lastTurn != null && r.turn <= t.lastTurn) || at - t.lastAt > 2 * 3600 * 1000) {
+        t = open[key] = { who: r.demo ? "visitor " + (r.visitor || "") : (r.email || r.person || "account gone"), demo: !!r.demo, room: r.room_name || (r.demo ? "the sample room" : (r.room ? "a room since deleted" : "no room")), arabic: !!r.arabic, rows: [], firstAt: at };
+        list.push(t);
+      }
+      t.rows.push(r); t.lastAt = at; t.lastTurn = r.turn;
+    });
+    list.sort(function (a, b) { return b.lastAt - a.lastAt; });
+    return list;
+  }
+  function drawTalks(rows, el, empty) {
+    var list = talks(rows || []);
+    if (!list.length) { el.innerHTML = '<p class="muted">' + esc(empty || "No questions yet.") + '</p>'; return; }
+    el.innerHTML = list.map(function (t) {
+      var first = t.rows[0], last = t.rows[t.rows.length - 1];
+      var tin = 0, tout = 0; t.rows.forEach(function (r) { tin += Number(r.tokens_in) || 0; tout += Number(r.tokens_out) || 0; });
+      return '<div class="session-head">' + esc(t.who) + ' · ' + esc(t.room) + ' · ' + esc(when(first.at)) + (t.rows.length > 1 ? ' → ' + esc(new Date(last.at).toLocaleTimeString(undefined, { timeStyle: "short" })) : "")
+        + ' <span class="muted">(' + t.rows.length + (t.rows.length === 1 ? " question" : " questions") + (t.arabic ? ", Arabic" : "") + (tin || tout ? ", " + n(tin) + " tokens read, " + n(tout) + " written" : "") + ')</span></div>'
+        + '<div class="talk">' + t.rows.map(function (r) {
+          var answered = r.status === 200 && r.answer;
+          var why = REFUSED[r.reason] || (r.reason ? esc(r.reason) : "no answer (status " + esc(r.status) + ")");
+          return '<p class="q" dir="auto"><time>' + esc(new Date(r.at).toLocaleTimeString(undefined, { timeStyle: "short" })) + '</time>' + esc(r.question) + '</p>'
+            + (answered ? '<p class="a" dir="auto">' + esc(r.answer) + '</p>' : '<p class="a refused"><span class="bad">✗</span> ' + why + '</p>');
+        }).join("") + '</div>';
+    }).join("");
+  }
+  function refreshAssistant() {
+    var days = Number($("days").value) || 30;
+    var args = { days: days, most: 400 };
+    var which = $("assistant-which").value, search = $("assistant-search").value.trim();
+    if (which) args.which = which;
+    if (search) args.search = search;
+    $("assistant-status").textContent = "Loading…";
+    return rpc("insights_assistant", args).then(function (rows) {
+      drawTalks(rows, $("assistant"), search ? "Nothing with that word in the period." : "No questions in the period.");
+      $("assistant-status").textContent = rows.length ? n(rows.length) + (rows.length === 400 ? " (the latest 400)" : "") + (rows.length === 1 ? " question" : " questions") : "";
+    }).catch(function (e) { $("assistant-status").textContent = ""; $("assistant").innerHTML = '<p class="problem">' + esc(e.message) + '</p>'; });
+  }
+
   // ----- Support: rooms and accounts as they are -----
   function roomCells(r) {
     return '<td>' + esc(r.name || "(unnamed)") + (r.home_rooms && r.home_rooms.length ? ' <span class="muted">' + esc(r.home_rooms.join(", ")) + '</span>' : "") + (r.deleted ? ' <span class="bad">deleted</span>' : "") + '</td>'
@@ -417,9 +488,11 @@
       if ((d.reports || []).length) {
         html += '<h4>Reports they sent</h4><div class="wrap"><table><tr><th>When</th><th>Kind</th><th>Room</th><th>Text</th><th>Resolved</th></tr>' + d.reports.map(function (x) { return '<tr><td>' + esc(when(x.at)) + '</td><td>' + esc(x.kind) + '</td><td>' + esc(x.room || "") + '</td><td>' + esc(x.text || "") + '</td><td>' + (x.resolved ? "yes" : "") + '</td></tr>'; }).join("") + '</table></div>';
       }
+      html += '<h4>What they asked the assistant</h4><div id="person-assistant"></div>';
       var views = d.views || [];
       html += '<p class="muted">Looks at this account by admins, this one included: ' + views.map(function (v) { return esc(v.admin) + " (" + esc(v.what) + ", " + esc(ago(v.at)) + ")"; }).join("; ") + '.</p>';
       $("person").innerHTML = html;
+      drawTalks((d.assistant || []).map(function (x) { x.email = a.email; x.person = a.id; return x; }), $("person-assistant"), "Nothing yet.");
       wireRoomButtons($("person"));
     }).catch(function (e) { $("person").innerHTML = '<p class="problem">' + esc(e.message) + '</p>'; });
   }
@@ -534,6 +607,7 @@
       state.overview = r[0]; state.people = r[1];
       drawOverview(state.overview); drawPeople(state.people); drawRooms(r[2] || []);
       $("status").textContent = "As of " + when(state.overview.now) + ".";
+      return refreshAssistant();
     }).catch(function (e) {
       $("status").textContent = "";
       if (e.status === 401 || /signed out/.test(e.message)) { showSignIn("Sign in again."); return; }
@@ -557,6 +631,8 @@
     showSignIn();
   });
   $("install-form").addEventListener("submit", function (ev) { ev.preventDefault(); var id = $("install").value.trim(); if (id) showTrail({ install_id: id }, "visitor " + id.slice(0, 8) + "…"); });
+  $("assistant-form").addEventListener("submit", function (ev) { ev.preventDefault(); refreshAssistant(); });
+  $("assistant-which").addEventListener("change", refreshAssistant);
 
   drawCatalog();
   load();

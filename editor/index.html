@@ -1156,6 +1156,7 @@ const AR = {
   "Couldn't ask: %@": "تعذّر السؤال: %@",
   "Couldn't reach the assistant. Is the computer online?": "تعذّر الوصول إلى المساعد. هل الكمبيوتر متصل بالإنترنت؟",
   "Free to try in the sample room; your own rooms need Plus.": "مجاني للتجربة في الغرفة التجريبية؛ أما غرفك فتحتاج إلى Plus.",
+  "Questions and answers are kept for 90 days, so whoever runs this service can see what the assistant is asked and where it falls short.": "تُحفظ الأسئلة والإجابات لمدة 90 يومًا، ليرى من يدير هذه الخدمة ما يُسأل عنه المساعد وأين يقصّر.",
   "The sample room's assistant has answered enough for today. Sign in to ask about your own rooms.": "أجاب مساعد الغرفة التجريبية بما يكفي لهذا اليوم. سجّل الدخول لتسأل عن غرفك.",
   "Editing the plan": "تعديل المخطط",
   "Electronics": "إلكترونيات",
@@ -3274,8 +3275,10 @@ function roomSize(layout, rotation = planRotation(layout)) {
 // things in them) goes to the cloud's claude function with each question;
 // Claude answers from it: where things are, how to make them easier to find
 // with low vision, what a room like this usually has, where it's crowded.
-// With Plus, like Claude in Use. Nothing is kept: a conversation lives
-// while the room is open.
+// With Plus, like Claude in Use. A conversation lives here while the room
+// is open; the function keeps each question and its answer for a while, for
+// the service's Insights page (the privacy policy says so, and so does the
+// intro below).
 const chat = { messages: [], busy: false, roomId: null };
 
 /** Where the assistant is: the service's project (or the one signed in to), or null. */
@@ -3369,7 +3372,8 @@ function renderChat() {
     const intro = document.createElement("p");
     intro.className = "chat-intro";
     intro.textContent = tr("Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.", state.room?.name || tr("this room"))
-      + (state.mode === "demo" ? " " + tr("Free to try in the sample room; your own rooms need Plus.") : "");
+      + (state.mode === "demo" ? " " + tr("Free to try in the sample room; your own rooms need Plus.") : "")
+      + " " + tr("Questions and answers are kept for 90 days, so whoever runs this service can see what the assistant is asked and where it falls short.");
     log.appendChild(intro);
   }
   for (const m of chat.messages) {
