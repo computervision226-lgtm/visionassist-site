@@ -135,6 +135,16 @@ a:focus-visible, button:focus-visible {
   border: 2px solid var(--accent);
 }
 
+/* What it costs: rooms and Plus side by side, one above the other when narrow. */
+.prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin: 1rem 0 1.2rem; }
+.prices .card { margin: 0; }
+.prices h3 { margin-top: 0; }
+.prices table { margin-bottom: 0; }
+.amount { font-size: 1.8rem; font-weight: 700; line-height: 1.2; margin: 0 0 0.6rem; font-variant-numeric: tabular-nums; }
+.amount span { font-size: 1rem; font-weight: 400; color: var(--muted); }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+th.num:last-child, td.num:last-child { padding-right: 0; }
+
 dl.facts { margin: 0 0 1rem; }
 dl.facts dt { font-weight: 700; margin-top: 0.8rem; }
 dl.facts dd { margin: 0.1rem 0 0 0; max-width: 65ch; }

@@ -200,7 +200,7 @@
     "app.open": "The app was opened or came back to the front: version, language, whether VoiceOver is on.",
     "screen.home": "The home screen (the list of rooms) was shown.",
     "screen.scan": "The scanning screen was opened.", "screen.use": "Find was opened.", "screen.contribute": "Add by hand was opened.",
-    "screen.settings": "Settings was opened.", "screen.plus": "The Minutes and Plus screen was opened.", "screen.account": "The account screen was opened.",
+    "screen.settings": "Settings was opened.", "screen.plus": "The Rooms and Plus screen was opened.", "screen.account": "The account screen was opened.",
     "account.signup": "An account was created (ok: signed in at once; not ok: the email must be confirmed first, or it failed: error).",
     "account.confirmed": "The email was confirmed (how: code, link or by itself).", "account.signin": "A sign-in (ok or the error).",
     "account.reset": "A password reset was asked for, or set (step).", "account.signout": "Signed out.", "account.deleted": "The account was deleted.",
@@ -227,8 +227,9 @@
     "contribute.pinned": "A place was added by hand.",
     "contribute.rescan_looked": "Scan this spot again: Claude looked (found, added, moved, seen).",
     "contribute.rescan": "Scan this spot again was saved (added, moved), or not taken (why: person).",
-    "plus.buy": "Buy minutes or Get Plus was tapped (what).", "plus.paid": "A payment reached the account (what, minutes).",
-    "plus.promo": "A promo code was tried (ok, reason).",
+    "plus.buy": "A room pack or Get Plus was tapped (what: rooms or plus; rooms: the pack).",
+    "plus.paid": "A payment reached the account (what, rooms), or nothing had yet when they came back from paying (not ok).",
+    "plus.promo": "A promo code was tried (ok, reason).", "plus.organizations": "Write to us, for an organization or a sponsorship, was tapped.",
     "sync.failed": "The sync with the cloud failed (error).", "claude.failed": "Claude couldn't be asked (purpose, error).",
     "editor.open": "The editor was opened (mode: remote, demo or local).", "editor.signin": "Signed in to the editor (ok or error).",
     "editor.room": "A room was opened in the editor.", "editor.rename": "An item was renamed.", "editor.note": "A note was written.",
@@ -237,13 +238,21 @@
     "editor.restore_scan": "Restore previous scan (ok, or the error).",
     "ask.question": "The room assistant was asked (ok: it answered; not: the refusal).", "demo.open": "The sample room was explored.",
     "demo.question": "The sample room's assistant was asked (ok or the refusal).",
-    "page.view": "A page of the website was opened (path, referrer's site).", "page.store": "The App Store link was tapped (where)."
+    "plan.open": "Rooms and Plus was opened in the editor (plus: whether it was on).",
+    "plan.buy": "A room pack or Get Plus was clicked in the editor (what, rooms).",
+    "plan.paid": "A payment reached the account, seen in the editor (what, rooms), or nothing had yet when they came back (not ok).",
+    "plan.manage": "Change or cancel Plus was clicked in the editor.", "plan.donate": "Donate was clicked in the editor.",
+    "plan.organizations": "Write to us (organizations and sponsors) was clicked in the editor.",
+    "page.view": "A page of the website was opened (path, referrer's site).", "page.store": "The App Store link was tapped (where).",
+    "page.editor": "A link to the editor was clicked on the website (where).", "page.donate": "Donate was clicked on the website (where).",
+    "page.organizations": "Write to us, for an organization or a sponsorship, was clicked on the website (where)."
   };
 
   var state = { token: null, refresh: null, overview: null, people: null };
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function n(x) { return (x == null || isNaN(x)) ? "–" : Number(x).toLocaleString(); }
+  function clock(s) { s = Math.max(0, Math.round(Number(s) || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
   function pct(a, b) { return b ? Math.round(100 * a / b) + "%" : "–"; }
   function bytes(b) { b = Number(b) || 0; var u = ["B", "KB", "MB", "GB", "TB"], i = 0; while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; } return (i ? b.toFixed(1) : b) + " " + u[i]; }
   function when(t) { if (!t) return "–"; var d = new Date(t); return isNaN(d) ? "–" : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); }
@@ -300,10 +309,14 @@
     var er = o.errors || [];
     $("errors").innerHTML = er.length ? '<tr><th>Where</th><th>What</th><th class="n">Times</th><th>Last</th><th>Example</th></tr>' + er.map(function (e) {
       return '<tr><td>' + esc(e.surface) + '</td><td><code>' + esc(e.name) + '</code></td><td class="n">' + n(e.count) + '</td><td>' + esc(ago(e.last)) + '</td><td class="muted">' + esc(e.sample || "") + '</td></tr>'; }).join("") : '<tr><td class="muted">No errors in the period.</td></tr>';
-    $("tiles-money").innerHTML = tile("minutes bought", n(m.minutes_bought), n(m.purchases) + " purchases; " + n(m.minutes_bought_all) + " ever")
+    // (Rooms from a service that reports them; minutes, two to a room, from one that doesn't yet.)
+    var bought = m.rooms_bought != null ? m.rooms_bought : Math.round((m.minutes_bought || 0) / 2);
+    var boughtAll = m.rooms_bought_all != null ? m.rooms_bought_all : Math.round((m.minutes_bought_all || 0) / 2);
+    var paid = Object.keys(m.rooms_paid || {}).map(function (c) { return (m.rooms_paid[c] / 100).toFixed(2) + " " + c.toUpperCase(); }).join(", ");
+    $("tiles-money").innerHTML = tile("rooms bought", n(bought), n(m.purchases) + " purchases" + (paid ? ", " + paid : "") + "; " + n(boughtAll) + " ever")
       + tile("Plus subscribers", n(m.plus_active), n(m.plus_paid) + " paying, " + n(m.plus_new) + " new")
       + tile("promo codes used", n(m.promo_redemptions), "in the period")
-      + tile("minutes mapped", n(m.mapping_minutes_used), n(m.scans) + " scans");
+      + tile("rooms mapped", n(m.rooms_mapped != null ? m.rooms_mapped : (m.mapping_minutes_used || 0) / 2), n(m.scans) + " scans, " + n(m.mapping_minutes_used) + " min");
     var cl = o.claude || [], tot = { calls: 0, cost: 0, tin: 0, tout: 0 };
     cl.forEach(function (c) { tot.calls += c.calls; tot.cost += Number(c.cost); tot.tin += c.input_tokens; tot.tout += c.output_tokens; });
     $("claude-note").textContent = "Estimated at $" + o.claude_rates.in_per_million + " per million tokens read and $" + o.claude_rates.out_per_million + " written (service_settings: claude_in_per_million, claude_out_per_million).";
@@ -351,11 +364,11 @@
   }
 
   function drawPeople(people) {
-    var rows = '<tr><th>Account</th><th>Made</th><th>Last seen</th><th class="n">Events</th><th class="n">Failed</th><th class="n">Scans</th><th class="n">Finds</th><th class="n">Rooms</th><th>Plus</th><th class="n">Minutes</th><th>App</th><th></th></tr>';
+    var rows = '<tr><th>Account</th><th>Made</th><th>Last seen</th><th class="n">Events</th><th class="n">Failed</th><th class="n">Scans</th><th class="n">Finds</th><th class="n">Rooms</th><th>Plus</th><th class="n">Rooms bought</th><th>App</th><th></th></tr>';
     people.forEach(function (p, i) {
       rows += '<tr><td>' + esc(p.email || p.id) + (p.confirmed ? "" : ' <span class="muted">(not confirmed)</span>') + '</td><td>' + esc(when(p.created)) + '</td><td>' + esc(ago(p.last_event || p.last_sign_in)) + '</td>'
         + '<td class="n">' + n(p.events) + '</td><td class="n">' + (p.failed ? '<span class="bad">' + n(p.failed) + '</span>' : "0") + '</td><td class="n">' + n(p.scans) + '</td><td class="n">' + n(p.finds) + '</td><td class="n">' + n(p.rooms) + '</td>'
-        + '<td>' + (p.plus ? "yes" : "") + '</td><td class="n">' + n(p.minutes_bought) + ' <span class="muted">+' + n(p.mapping_minutes) + ' used</span></td><td class="muted">' + esc((p.version || "") + (p.language ? " " + p.language : "")) + '</td>'
+        + '<td>' + (p.plus ? "yes" : "") + '</td><td class="n">' + n(p.rooms_bought != null ? p.rooms_bought : Math.round((p.minutes_bought || 0) / 2)) + ' <span class="muted">' + n(p.rooms_mapped != null ? p.rooms_mapped : (p.mapping_minutes || 0) / 2) + ' used</span></td><td class="muted">' + esc((p.version || "") + (p.language ? " " + p.language : "")) + '</td>'
         + '<td><button class="plain" type="button" data-trail="' + i + '">Trail</button> <button class="plain" type="button" data-person="' + i + '">Account</button></td></tr>';
     });
     $("people").innerHTML = rows;
@@ -392,7 +405,7 @@
   // ----- The assistant's trail: questions and answers, as conversations -----
   var REFUSED = { needs_plus: "refused: needs Plus", demo_limit: "refused: the sample room's limit for today", monthly_limit: "refused: the month's Claude allowance is used up",
     busy: "busy: asked to try again", timeout: "Claude took too long", unreachable: "couldn't reach Claude", not_set_up: "Claude isn't set up", unauthorized: "not signed in",
-    bad_request: "a bad request", server: "a server error", free_used: "refused: mapping minutes used up" };
+    bad_request: "a bad request", server: "a server error", free_used: "refused: rooms used up" };
   /** Rows (newest first) as conversations: one person (or one visitor) in one room, from a first question on, newest conversation first. */
   function talks(rows) {
     var list = [], open = {};
@@ -468,10 +481,10 @@
     rpc("insights_person", { person: p.id }).then(function (d) {
       var a = d.account || {}, plan = d.plan || {};
       var facts = [["Made", when(a.created)], ["Confirmed", a.confirmed ? "yes" : "no"], ["Last sign-in", ago(a.last_sign_in)],
-        ["Plus", plan.plus ? "yes" : "no"], ["Mapping left", plan.free_seconds_left != null ? Math.round(plan.free_seconds_left / 60) + " min of " + Math.round((plan.free_seconds || 0) / 60) : "–"],
-        ["Minutes bought", n(Math.round((plan.seconds_bought || 0) / 60))], ["Use photos left", plan.plus ? n(plan.use_photos_left) : "–"],
+        ["Plus", plan.plus ? "yes" : "no"], ["Rooms left", plan.free_seconds_left != null ? n(plan.rooms_left) + " of " + n(plan.rooms) + ' <span class="muted">(' + clock(plan.free_seconds_left) + " of " + clock(plan.free_seconds) + " of scanning)</span>" : "–"],
+        ["Rooms bought", n(plan.rooms_bought != null ? plan.rooms_bought : Math.round((plan.seconds_bought || 0) / 120))], ["Use photos left", plan.plus ? n(plan.use_photos_left) : "–"],
         ["Promo codes", (d.promo || []).map(function (x) { return x.code; }).join(", ") || "none"],
-        ["Purchases", (d.purchases || []).length ? d.purchases.map(function (x) { return x.minutes + " min" + (x.amount ? " (" + (x.amount / 100).toFixed(2) + " " + (x.currency || "").toUpperCase() + ")" : ""); }).join(", ") : "none"],
+        ["Purchases", (d.purchases || []).length ? d.purchases.map(function (x) { return (x.rooms != null ? n(x.rooms) + (Number(x.rooms) === 1 ? " room" : " rooms") : x.minutes + " min") + (x.amount ? " (" + (x.amount / 100).toFixed(2) + " " + (x.currency || "").toUpperCase() + ")" : ""); }).join(", ") : "none"],
         ["Scans", n((d.scans || []).length) + " (" + n(Math.round((d.scans || []).reduce(function (s, x) { return s + x.seconds; }, 0) / 60)) + " min)"],
         ["Claude calls", n((d.claude || {}).calls) + (d.claude && d.claude.failed ? ', <span class="bad">' + n(d.claude.failed) + ' failed</span>' : "")],
         ["Events (30 days)", n(d.events)]];

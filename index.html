@@ -49,8 +49,35 @@
   </ul>
   <p>In English and Arabic, screens, directions and voice commands alike.</p>
 
-  <h2>What it costs</h2>
-  <p>The app is free, and so is your first room (about a minute of mapping). After that, mapping with Claude naming what it sees is paid for by the minute: buy minutes in the app as you need them ($10 each; they never expire). Claude finding things and reading labels in Find needs <strong>Whereabouts Plus</strong>, a subscription that one person's family shares ($9.99 a month, or $79 a year). Finding your way with the maps you have is always free.</p>
+  <h2 id="pricing">What it costs</h2>
+  <p>The app is free, and so is your first room. Finding your way with the maps you have is always free.</p>
+  <div class="prices">
+    <section class="card" aria-labelledby="price-rooms">
+      <h3 id="price-rooms">Rooms</h3>
+      <p>A room is one scan of up to two minutes, with Claude naming what it sees and what's inside the drawers you open. Buy them as you need them; they never expire.</p>
+      <table>
+        <thead><tr><th scope="col">Pack</th><th scope="col" class="num">Price</th><th scope="col" class="num">A room</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1 room</th><td class="num">$9.99</td><td class="num">$9.99</td></tr>
+          <tr><th scope="row">5 rooms</th><td class="num">$29.99</td><td class="num">$6.00</td></tr>
+          <tr><th scope="row">10 rooms</th><td class="num">$49.99</td><td class="num">$5.00</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="card" aria-labelledby="price-plus">
+      <h3 id="price-plus">Whereabouts Plus</h3>
+      <p class="amount">$19.99 <span>a month</span></p>
+      <p>Claude finds what the phone can't see and reads labels in Find, for you and everyone you share your rooms with, and answers questions about your rooms in the editor. Cancel any time.</p>
+    </section>
+  </div>
+  <p>Buy them in <a href="editor/">the editor</a> on a computer (<strong>Rooms and Plus</strong>, at the top) or, in the US, in the app (gear icon, <strong>Claude</strong>), on Stripe's secure payment pages.</p>
+
+  <h3 id="organizations">For organizations and sponsors</h3>
+  <p>Whereabouts for an organization's clients, such as a rehabilitation agency, a school or a care home, or Plus sponsored for someone who can't pay for it: <a href="mailto:computervision226@gmail.com?subject=Whereabouts%20for%20an%20organization%2C%20or%20sponsoring%20Plus">write to us</a> for pricing.</p>
+
+  <h3 id="donate">Support Whereabouts</h3>
+  <p>A donation of any amount helps keep Whereabouts going, and the first room free for everyone. Whereabouts isn't a charity, so a donation isn't tax-deductible.</p>
+  <p><a class="button" href="https://donate.stripe.com/5kQ4gygH45dgeAo8wdco005">Donate</a></p>
 
   <h2>Good to know</h2>
   <ul>
@@ -96,6 +123,8 @@
     var href = a.getAttribute("href") || "";
     if (/apps\.apple\.com|testflight\.apple\.com/.test(href)) send("page.store", { where: location.pathname });
     else if (/^editor\/?$|\/editor\/?$/.test(href)) send("page.editor", { where: location.pathname });
+    else if (/donate\.stripe\.com/.test(href)) send("page.donate", { where: location.pathname });
+    else if (/^mailto:/.test(href) && /organization/.test(href)) send("page.organizations", { where: location.pathname });
   });
 })();
 </script>

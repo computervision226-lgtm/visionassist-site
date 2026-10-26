@@ -371,6 +371,28 @@ button { cursor: pointer; }
 .chat-form { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--rule); align-items: flex-end; }
 .chat-form textarea { flex: 1; min-width: 0; resize: none; max-height: 120px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--sheet); color: var(--ink); }
 .chat-form .btn { min-height: 38px; padding-block: 6px; }
+/* Rooms and Plus: what the account has, and buying more, in the same kind of panel. */
+.plan-panel { height: auto; max-height: min(680px, calc(100vh - 96px)); }
+.plan-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 18px; display: grid; gap: 18px; align-content: start; }
+.plan-body section { display: grid; gap: 8px; }
+.plan-body h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.plan-body p { margin: 0; }
+.plan-body .btn { text-decoration: none; justify-self: start; }
+.plan-body section + section { padding-top: 16px; border-top: 1px solid var(--rule); }
+.plan-now { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
+.plan-now .fact { grid-template-columns: 120px minmax(0, 1fr); }
+.plan-now .on { color: var(--ok); font-weight: 600; }
+.offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
+.offer {
+  display: grid; gap: 2px; justify-items: center; align-content: start; padding: 10px 8px; text-align: center; text-decoration: none;
+  border: 1px solid var(--rule-strong); border-radius: 10px; background: var(--panel); color: var(--ink);
+}
+.offer:hover { border-color: var(--blue); }
+.offer .what { font-weight: 700; }
+.offer .price { font: 600 18px var(--font-data); }
+.offer .each { font-size: 12px; color: var(--ink-3); }
+.plan-mail { font-family: var(--font-data); font-size: 13.5px; overflow-wrap: anywhere; user-select: all; }
+.chat-plus { display: flex; margin-top: 8px; min-height: 34px; padding: 6px 12px; }
 .photo {
   width: 100%; aspect-ratio: 4 / 3; max-width: 100%; border-radius: 10px; background: var(--floor);
   display: grid; place-items: center; overflow: hidden; color: var(--ink-3);
@@ -602,6 +624,7 @@ button { cursor: pointer; }
       <span data-i18n="Ask">Ask</span>
     </button>
     <span class="status" id="status" data-state="ok" aria-live="polite"><span class="dot"></span><span id="status-text" data-i18n="Connected">Connected</span></span>
+    <button class="btn ghost" type="button" id="plan-button" aria-pressed="false" hidden data-i18n="Rooms and Plus">Rooms and Plus</button>
     <span class="account" id="account"></span>
     <button class="btn ghost lang-switch" type="button" data-lang-switch lang="ar">العربية</button>
     <button class="btn ghost" type="button" id="sign-out">Sign out</button>
@@ -683,6 +706,14 @@ button { cursor: pointer; }
       <button class="btn primary" type="submit" id="chat-send" data-i18n="Send">Send</button>
     </form>
   </section>
+
+  <section class="chat plan-panel" id="plan-panel" hidden role="dialog" aria-labelledby="plan-title">
+    <header class="chat-head">
+      <strong id="plan-title" data-i18n="Rooms and Plus">Rooms and Plus</strong>
+      <button class="tool" type="button" id="plan-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+    </header>
+    <div class="plan-body" id="plan-body"></div>
+  </section>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
@@ -720,6 +751,23 @@ const STORAGE_KEYS = { url: "va.supabase.url", key: "va.supabase.key", email: "v
 // publishable key, as in the app's Service.swift. Filled in, signing in asks
 // only for the email and password.
 const SERVICE = { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
+// What the service sells, as in the app's Service.swift (README, "Get paid
+// with Stripe"): rooms in packs, each its own Stripe Payment Link (the cloud's
+// room_packs table says what each is worth); Plus, by the month; where Plus is
+// changed or cancelled; a donation of any amount; and where organizations and
+// sponsors write for pricing. Shown under Rooms and Plus in a browser only: in
+// the app, its own screen sells them, as the App Store wants. Empty: none.
+const PRICES = {
+  rooms: [
+    { rooms: 1, price: "$9.99", link: "https://buy.stripe.com/9B600i4YmeNQdwk9Ahco002" },
+    { rooms: 5, price: "$29.99", link: "https://buy.stripe.com/7sY8wO76ucFI4ZOdQxco003" },
+    { rooms: 10, price: "$49.99", link: "https://buy.stripe.com/eVq7sK8aydJM3VKdQxco004" },
+  ],
+  plus: { link: "https://buy.stripe.com/cNi4gy62q7lo1NCaElco006", month: "$19.99" },
+  manage: "https://billing.stripe.com/p/login/bJedR8aiGgVY3VK6o5co000",
+  donate: "https://donate.stripe.com/5kQ4gygH45dgeAo8wdco005",
+  organizations: "computervision226@gmail.com",
+};
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -973,6 +1021,7 @@ function setLanguage(lang) {
   if (sample) retranslateSample(sample, sampleData());
   if (!state.mode) return;
   showAccount();
+  if (!$("plan-panel").hidden) renderPlan();
   refreshStatus();
   if (state.room) $("room-title").title = isMine(state.room) ? "" : sharedBy(state.room);
   setPlacing(state.placing);
@@ -1149,6 +1198,33 @@ const AR = {
   "Thinking…": "جارٍ التفكير…",
   "Sign in again to ask.": "سجّل الدخول مرة أخرى لتسأل.",
   "The assistant needs Whereabouts Plus, like Claude in Find: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى Whereabouts Plus، مثل Claude في البحث: في التطبيق، رمز الترس، ثم Claude، ثم احصل على Plus. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
+  "The assistant needs Whereabouts Plus, like Claude in Find. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى Whereabouts Plus، مثل Claude في البحث. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
+  "Rooms and Plus": "الغرف وPlus",
+  "Get Plus": "احصل على Plus",
+  "Get Plus: %@ a month": "احصل على Plus: %@ شهريًا",
+  "Rooms left": "الغرف المتبقية",
+  "Rooms bought": "الغرف المشتراة",
+  "%@ (%@ of scanning)": "%@ (%@ من المسح)",
+  "%@ a room": "%@ للغرفة",
+  "Plus, for Find": "Plus، للبحث",
+  "Active": "مفعّل",
+  "Not active": "غير مفعّل",
+  "Checking your account…": "جارٍ التحقق من حسابك…",
+  "Couldn't check your account just now.": "تعذّر التحقق من حسابك الآن.",
+  "Your first room is free. After that, buy rooms: a room is one scan of up to two minutes with the iPhone, with Claude naming what it sees and what's inside the drawers you open. Rooms never expire.": "غرفتك الأولى مجانية. بعدها اشترِ غرفًا: الغرفة مسح واحد بالآيفون لا يتجاوز دقيقتين، يسمّي فيه Claude ما يراه وما بداخل الأدراج التي تفتحها. الغرف لا تنتهي صلاحيتها.",
+  "Plus is on for this account.": "Plus مفعّل لهذا الحساب.",
+  "Change or cancel Plus": "تغيير Plus أو إلغاؤه",
+  "Claude finds what the phone can't see and reads labels in Find, for you and everyone you share your rooms with, and answers questions about your rooms here.": "يعثر Claude في البحث على ما لا يراه الهاتف ويقرأ الملصقات، لك ولكل من تشاركهم غرفك، ويجيب هنا عن أسئلتك حول غرفك.",
+  "Paying opens a secure Stripe page in a new tab, made out to the account you're signed in with (%@). What you buy is on it as soon as the payment goes through: come back here afterwards.": "يفتح الدفع صفحة Stripe آمنة في علامة تبويب جديدة، باسم الحساب الذي سجّلت الدخول به (%@). يُضاف ما تشتريه إليه بمجرد إتمام الدفع: عد إلى هنا بعد ذلك.",
+  "Paid already? Check again": "دفعت بالفعل؟ تحقّق مرة أخرى",
+  "Organizations and sponsors": "المؤسسات والرعاة",
+  "Whereabouts for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.": "Whereabouts لعملاء مؤسسة (جهة تأهيل، دار رعاية)، أو رعاية اشتراك Plus لمن لا يستطيع دفعه: راسلنا لمعرفة الأسعار.",
+  "Support Whereabouts": "ادعم Whereabouts",
+  "A donation of any amount helps keep Whereabouts going, and the first room free for everyone.": "أي تبرع، مهما كان مبلغه، يساعد على استمرار Whereabouts وعلى بقاء الغرفة الأولى مجانية للجميع.",
+  "Donate": "تبرّع",
+  "Plus is on. Thank you!": "تم تفعيل Plus. شكرًا لك!",
+  "%@ added. Thank you!": "أُضيفت %@. شكرًا لك!",
+  "Nothing new has reached %@ yet. If you've just paid, wait a minute and check again.": "لم يصل شيء جديد إلى %@ بعد. إن كنت قد دفعت للتو، فانتظر دقيقة وتحقق مرة أخرى.",
   "This month's Claude allowance is used up. It starts again next month.": "استُنفدت حصة Claude لهذا الشهر. تبدأ من جديد الشهر القادم.",
   "Claude isn't set up in this cloud yet.": "لم يُعدّ Claude في هذه السحابة بعد.",
   "Busy for a moment: try again.": "مشغول للحظة: حاول مرة أخرى.",
@@ -1885,6 +1961,8 @@ function showAccount() {
   $("account").textContent = state.user?.email || "";
   $("sign-out").title = state.user?.email ? tr("Signed in as %@", state.user.email) : "";
   $("sign-out").textContent = state.mode === "demo" ? tr("Leave the sample") : host.on ? tr("Close") : tr("Sign out");
+  $("plan-button").hidden = !planAvailable();
+  if (!planAvailable()) planClose();
 }
 
 function showWorkspace() {
@@ -1930,6 +2008,8 @@ async function signOut() {
   watchTheirs();
   Object.keys(deletedHere).forEach((id) => delete deletedHere[id]);
   disposeThree();
+  planForget();
+  $("plan-button").hidden = true;
   $("workspace").hidden = true;
   $("signin").hidden = false;
 }
@@ -3382,6 +3462,15 @@ function renderChat() {
     box.dir = "auto";
     if (m.role === "assistant") box.innerHTML = chatHTML(m.text);
     else box.textContent = m.text;
+    // (Needs Plus, in a browser: where it's bought.)
+    if (m.plus && planAvailable()) {
+      const get = document.createElement("button");
+      get.type = "button";
+      get.className = "btn primary chat-plus";
+      get.textContent = PRICES.plus?.month ? tr("Get Plus: %@ a month", PRICES.plus.month) : tr("Get Plus");
+      get.addEventListener("click", planOpen);
+      box.appendChild(get);
+    }
     log.appendChild(box);
   }
   if (chat.busy) {
@@ -3409,6 +3498,7 @@ function renderChat() {
 
 function chatOpen() {
   if (!state.room) return;
+  planClose();
   chat.roomId = state.room.id;
   $("chat").hidden = false;
   renderChat();
@@ -3431,7 +3521,9 @@ function chatProblem(status, body) {
   const type = body?.error?.type;
   if (status === 401) return tr("Sign in again to ask.");
   if (type === "demo_limit") return tr("The sample room's assistant has answered enough for today. Sign in to ask about your own rooms.");
-  if (type === "needs_plus") return tr("The assistant needs Whereabouts Plus, like Claude in Find: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.");
+  if (type === "needs_plus") return planAvailable()
+    ? tr("The assistant needs Whereabouts Plus, like Claude in Find. In a room shared with you, its owner's Plus counts.")
+    : tr("The assistant needs Whereabouts Plus, like Claude in Find: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.");
   if (type === "monthly_limit") return tr("This month's Claude allowance is used up. It starts again next month.");
   if (type === "not_set_up") return tr("Claude isn't set up in this cloud yet.");
   if (status === 429 || type === "busy") return tr("Busy for a moment: try again.");
@@ -3455,7 +3547,7 @@ async function chatSend(text) {
   try {
     const headers = { apikey: service.key, "content-type": "application/json" };
     if (!demo) {
-      const token = host.on ? host.token : (await state.client.auth.getSession()).data?.session?.access_token;
+      const token = await accountToken();
       if (!token) throw { status: 401 };
       headers.authorization = `Bearer ${token}`;
     }
@@ -3467,7 +3559,8 @@ async function chatSend(text) {
       body: JSON.stringify({ room: demo ? null : room.id, arabic: LANG === "ar", messages: turns, context: roomContext() }),
     });
     const body = await response.json().catch(() => null);
-    outcome = response.ok && typeof body?.answer === "string" ? { answer: body.answer } : { problem: chatProblem(response.status, body) };
+    outcome = response.ok && typeof body?.answer === "string" ? { answer: body.answer }
+      : { problem: chatProblem(response.status, body), plus: body?.error?.type === "needs_plus" && planAvailable() };
   } catch (error) {
     outcome = { problem: chatProblem(error?.status ?? 0, null) };
   }
@@ -3479,9 +3572,198 @@ async function chatSend(text) {
   else {
     chat.messages.pop();
     $("chat-input").value = question;
-    chat.messages.push({ role: "error", text: outcome.problem });
+    chat.messages.push({ role: "error", text: outcome.problem, plus: !!outcome.plus });
   }
   renderChat();
+}
+
+// ----- Rooms and Plus: what the account has, and buying more -----
+// In a browser signed in to the service: how many rooms of mapping are left
+// (the first is free; a room is one scan of up to two minutes, a saved scan
+// counted up to whole rooms), whether Plus is on, and the Stripe pages that
+// sell more (PRICES), each made out to this account: the payment says whose it
+// is, with the account's email filled in and fixed, and reaches the account
+// within seconds (the cloud's stripe function). Not in the app's own web view:
+// the app has its own screen, which keeps to the App Store's rules on where
+// payment links may show.
+const plan = { status: null, loading: false, failed: false, before: null, paying: null, checking: false, message: null };
+
+/** Whether this editor sells rooms and Plus: the service's own, in a browser, signed in. */
+function planAvailable() {
+  return state.mode === "remote" && !host.on && !!(SERVICE.url && SERVICE.key) && !!state.user?.id;
+}
+
+/** The account's access token: the app's, or the client's session's. */
+async function accountToken() {
+  if (host.on) return host.token;
+  try { return (await state.client.auth.getSession()).data?.session?.access_token || null; } catch { return null; }
+}
+
+/** A payment page made out to this account (whose payment it is, and its email, fixed), or null. */
+function payURL(link) {
+  try {
+    const url = new URL(String(link || ""));
+    if (url.protocol !== "https:" || !state.user?.id) return null;
+    for (const name of ["client_reference_id", "prefilled_email", "locked_prefilled_email"]) url.searchParams.delete(name);
+    url.searchParams.set("client_reference_id", String(state.user.id).toLowerCase());
+    if (state.user.email) url.searchParams.set("locked_prefilled_email", state.user.email);
+    return url.toString();
+  } catch { return null; }
+}
+
+/** Where Plus is changed or cancelled, with the account's email filled in, or null. */
+function manageURL() {
+  try {
+    const url = new URL(String(PRICES.manage || ""));
+    if (url.protocol !== "https:") return null;
+    if (state.user?.email) url.searchParams.set("prefilled_email", state.user.email);
+    return url.toString();
+  } catch { return null; }
+}
+
+/** Rooms in so many seconds of mapping, to the nearest room (as the app counts them). */
+const roomsOf = (seconds, roomSeconds) => (roomSeconds > 0 ? Math.max(0, Math.round((Number(seconds) || 0) / roomSeconds)) : 0);
+/** "3 rooms (6:00 of scanning)". */
+function roomsText(seconds, roomSeconds) {
+  const s = Math.max(0, Math.round(Number(seconds) || 0));
+  return tr("%@ (%@ of scanning)", countOf(roomsOf(s, roomSeconds), "room"), `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
+}
+/** "$6.00 a room" for 5 rooms at "$29.99"; "" for one room, or a price that isn't dollars. */
+function eachText(pack) {
+  const m = /^\$(\d+(?:\.\d{1,2})?)$/.exec(String(pack.price || "").trim());
+  return m && pack.rooms > 1 ? tr("%@ a room", "$" + (Number(m[1]) / pack.rooms).toFixed(2)) : "";
+}
+
+/** The account's rooms and Plus, from the cloud's claude function (null when it can't be read). */
+async function planRefresh() {
+  const service = chatService();
+  if (!service || !planAvailable()) return null;
+  plan.loading = true;
+  if (!$("plan-panel").hidden) renderPlan();
+  let status = null;
+  try {
+    const token = await accountToken();
+    if (token) {
+      const response = await fetch(`${service.url}/functions/v1/claude`, { headers: { apikey: service.key, authorization: `Bearer ${token}` } });
+      const body = await response.json().catch(() => null);
+      if (response.ok && body && typeof body === "object" && typeof body.plus === "boolean") status = body;
+    }
+  } catch { /* offline: as it was */ }
+  plan.loading = false;
+  plan.failed = !status;
+  if (status) plan.status = status;
+  if (!$("plan-panel").hidden) renderPlan();
+  return status;
+}
+
+function renderPlan() {
+  const s = plan.status;
+  const roomSeconds = Number(s?.room_seconds) > 0 ? Number(s.room_seconds) : 120;
+  const plus = s?.plus === true;
+  const now = s
+    ? `<dl class="plan-now">
+        <div class="fact"><dt>${tr("Rooms left")}</dt><dd>${esc(roomsText(s.free_seconds_left, roomSeconds))}</dd></div>
+        ${Number(s.rooms_bought) > 0 ? `<div class="fact"><dt>${tr("Rooms bought")}</dt><dd class="data">${esc(String(s.rooms_bought))}</dd></div>` : ""}
+        <div class="fact"><dt>${tr("Plus, for Find")}</dt><dd${plus ? ' class="on"' : ""}>${plus ? tr("Active") : tr("Not active")}</dd></div>
+      </dl>`
+    : `<p class="help">${plan.loading ? tr("Checking your account…") : plan.failed ? tr("Couldn't check your account just now.") : ""}</p>`;
+  const offers = PRICES.rooms.map((pack) => {
+    const url = payURL(pack.link);
+    if (!url) return "";
+    const each = eachText(pack);
+    return `<a class="offer" href="${esc(url)}" target="_blank" rel="noopener" data-pay="rooms" data-rooms="${pack.rooms}">
+      <span class="what">${esc(countOf(pack.rooms, "room"))}</span><span class="price">${esc(pack.price)}</span>${each ? `<span class="each">${esc(each)}</span>` : ""}</a>`;
+  }).join("");
+  const plusURL = payURL(PRICES.plus?.link);
+  const manage = manageURL();
+  const plusPart = plus
+    ? `<p>${tr("Plus is on for this account.")}</p>${manage ? `<a class="btn" href="${esc(manage)}" target="_blank" rel="noopener" data-manage>${tr("Change or cancel Plus")}</a>` : ""}`
+    : `<p class="help">${tr("Claude finds what the phone can't see and reads labels in Find, for you and everyone you share your rooms with, and answers questions about your rooms here.")}</p>
+       ${plusURL ? `<a class="btn primary" href="${esc(plusURL)}" target="_blank" rel="noopener" data-pay="plus">${esc(PRICES.plus.month ? tr("Get Plus: %@ a month", PRICES.plus.month) : tr("Get Plus"))}</a>` : ""}`;
+  const mail = String(PRICES.organizations || "").trim();
+  const subject = encodeURIComponent("Whereabouts for an organization, or sponsoring Plus");
+  $("plan-body").innerHTML = `
+    ${plan.message ? `<p class="notice info" role="status">${esc(plan.message)}</p>` : ""}
+    <section aria-live="polite">${now}</section>
+    ${offers ? `<section>
+      <h3>${tr("Rooms")}</h3>
+      <p class="help">${tr("Your first room is free. After that, buy rooms: a room is one scan of up to two minutes with the iPhone, with Claude naming what it sees and what's inside the drawers you open. Rooms never expire.")}</p>
+      <div class="offers">${offers}</div>
+    </section>` : ""}
+    <section>
+      <h3>${tr("Plus, for Find")}</h3>
+      ${plusPart}
+    </section>
+    ${offers || plusURL ? `<section>
+      <p class="help">${tr("Paying opens a secure Stripe page in a new tab, made out to the account you're signed in with (%@). What you buy is on it as soon as the payment goes through: come back here afterwards.", esc(state.user?.email || ""))}</p>
+      <button type="button" class="btn" id="plan-check"${plan.checking ? " disabled" : ""}>${plan.checking ? tr("Checking your account…") : tr("Paid already? Check again")}</button>
+    </section>` : ""}
+    ${mail ? `<section>
+      <h3>${tr("Organizations and sponsors")}</h3>
+      <p class="help">${tr("Whereabouts for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
+      <p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${subject}" data-write dir="ltr">${esc(mail)}</a></p>
+    </section>` : ""}
+    ${PRICES.donate ? `<section>
+      <h3>${tr("Support Whereabouts")}</h3>
+      <p class="help">${tr("A donation of any amount helps keep Whereabouts going, and the first room free for everyone.")}</p>
+      <a class="btn" href="${esc(PRICES.donate)}" target="_blank" rel="noopener" data-donate>${tr("Donate")}</a>
+    </section>` : ""}`;
+}
+
+function planOpen() {
+  if (!planAvailable()) return;
+  chatClose();
+  plan.message = null;
+  $("plan-panel").hidden = false;
+  $("plan-button").setAttribute("aria-pressed", "true");
+  usage.log("plan.open", null, { plus: plan.status?.plus === true });
+  renderPlan();
+  $("plan-body").scrollTop = 0;
+  planRefresh();
+  $("plan-close").focus();
+}
+
+function planClose() {
+  $("plan-panel").hidden = true;
+  $("plan-button").setAttribute("aria-pressed", "false");
+}
+
+/** Signed out: nothing of the account's left here. */
+function planForget() {
+  planClose();
+  Object.assign(plan, { status: null, loading: false, failed: false, before: null, paying: null, checking: false, message: null });
+}
+
+/** Whether a payment has reached the account (a few times, just back from paying):
+ *  Plus on, or more rooms than before. */
+async function planCheck(waiting) {
+  if (plan.checking) return;
+  const before = plan.before || plan.status;
+  plan.checking = true;
+  plan.message = null;
+  renderPlan();
+  let said = null;
+  for (let attempt = 0; attempt < (waiting ? 4 : 1) && !said; attempt++) {
+    if (attempt) await new Promise((resolve) => setTimeout(resolve, 3000));
+    const now = await planRefresh();
+    if (!now || !before || !planAvailable()) continue;
+    if (plan.paying?.what !== "rooms" && now.plus && before.plus !== true) {
+      said = tr("Plus is on. Thank you!");
+      usage.log("plan.paid", true, { what: "plus" });
+      continue;
+    }
+    const added = (Number(now.seconds_bought) || 0) - (Number(before.seconds_bought) || 0);
+    if (plan.paying?.what !== "plus" && added > 0) {
+      const rooms = Math.max(1, roomsOf(added, Number(now.room_seconds) || 120));
+      said = tr("%@ added. Thank you!", countOf(rooms, "room"));
+      usage.log("plan.paid", true, { what: "rooms", rooms });
+    }
+  }
+  plan.checking = false;
+  if (said) { plan.paying = null; plan.before = null; plan.message = said; }
+  else if (!waiting && before) plan.message = tr("Nothing new has reached %@ yet. If you've just paid, wait a minute and check again.", state.user?.email || "");
+  else if (waiting && plan.paying) usage.log("plan.paid", false, { what: plan.paying.what });
+  if (!$("plan-panel").hidden) renderPlan();
 }
 
 // ----- Plan view (SVG, meters) -----
@@ -7102,6 +7384,24 @@ function wireEvents() {
   $("edit-plan").addEventListener("click", () => setEditing(!state.editing));
   $("ask-room").addEventListener("click", () => { if ($("chat").hidden) chatOpen(); else chatClose(); });
   $("chat-close").addEventListener("click", chatClose);
+  $("plan-button").addEventListener("click", () => { if ($("plan-panel").hidden) planOpen(); else planClose(); });
+  $("plan-close").addEventListener("click", planClose);
+  $("plan-body").addEventListener("click", (e) => {
+    if (e.target.closest("#plan-check")) { planCheck(false); return; }
+    const pay = e.target.closest("[data-pay]");
+    if (pay) {
+      // (The page opens in a new tab; back here, the account is asked again.)
+      plan.paying = { what: pay.dataset.pay, rooms: Number(pay.dataset.rooms) || null };
+      plan.before = plan.status;
+      plan.message = null;
+      usage.log("plan.buy", null, pay.dataset.pay === "rooms" ? { what: "rooms", rooms: plan.paying.rooms } : { what: "plus" });
+      return;
+    }
+    if (e.target.closest("[data-donate]")) usage.log("plan.donate");
+    else if (e.target.closest("[data-write]")) usage.log("plan.organizations");
+    else if (e.target.closest("[data-manage]")) usage.log("plan.manage");
+  });
+  window.addEventListener("focus", () => { if (plan.paying && planAvailable() && !$("plan-panel").hidden) planCheck(true); });
   $("chat-clear").addEventListener("click", () => { chat.messages = []; renderChat(); $("chat-input").focus(); });
   $("chat-form").addEventListener("submit", (event) => { event.preventDefault(); chatSend($("chat-input").value); });
   $("chat-input").addEventListener("keydown", (event) => {
