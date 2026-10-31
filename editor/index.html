@@ -1637,7 +1637,7 @@ const AR = {
   "From": "من",
   "Give the event a name.": "أعطِ الفعالية اسمًا.",
   "Hidden: it was taken down, and isn't on anyone's phone. Publish it again from its event, or write to us.": "مخفي: أُزيل، وليس على هاتف أحد. انشره مجددًا من فعاليته، أو راسلنا.",
-  "HumanWare booth": "جناح HumanWare",
+  "Booth 42": "جناح 42",
   "I confirm": "أؤكد",
   "I scanned public areas only, with no one in the frame, and I understand the floor, its photos and its location become public to the event's attendees": "مسحت المناطق العامة فقط، دون أحد في الصورة، وأفهم أن الطابق وصوره وموقعه تصبح علنية لحاضري الفعالية",
   "It's ended: nobody new can join it, and its floors stay as they are.": "انتهت: لا يمكن لأحد جديد الانضمام إليها، وتبقى طوابقها كما هي.",
@@ -4149,7 +4149,7 @@ function listingHTML(item) {
   return `<div class="field" id="listing-section">
     <div class="section-title"><label for="listing-title">${tr("At the event")}</label></div>
     ${listed ? `<span class="help">${tr("Listed as “%@”: people can ask for it by that name.", esc(listed.title))}</span><div class="row"><button type="button" class="btn ghost" data-remove-listing="${esc(listed.id)}">${tr("Remove the listing")}</button></div>`
-      : `<div class="thing"><input id="listing-title" dir="auto" placeholder="${esc(tr("HumanWare booth"))}" maxlength="120" value="${esc(item.name || "")}"><button type="button" class="btn" id="listing-add">${tr("List it")}</button></div>
+      : `<div class="thing"><input id="listing-title" dir="auto" placeholder="${esc(tr("Booth 42"))}" maxlength="120" value="${esc(item.name || "")}"><button type="button" class="btn" id="listing-add">${tr("List it")}</button></div>
          <span class="hint">${tr("The name attendees will ask for: a booth, a company, a desk. It's findable by that name, and the event's stats count the people walked to it.")}</span>`}
   </div>`;
 }
