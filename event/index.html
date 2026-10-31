@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event – Whereabouts</title>
+<meta name="description" content="Join an event in Whereabouts: its floors are mapped, so you can ask your way to any room, desk or booth and be told the way.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="../site.css">
+<style>
+  /* The event's card, and the floors as a plain list. */
+  #event h1 { margin-bottom: 0.2rem; }
+  .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.6rem; letter-spacing: 0.18em; font-weight: 700; }
+  .floors li { max-width: none; }
+  .when { color: var(--muted); }
+  #open-note { display: none; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="top">
+  <div class="inner">
+    <a class="brand" href="../index.html">Whereabouts</a>
+    <nav class="site" aria-label="Site">
+      <ul>
+        <li><a href="../index.html">Get the app</a></li>
+        <li><a href="../support.html">Support</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section id="event" aria-live="polite">
+    <h1 id="event-name">Loading the event…</h1>
+    <p class="when" id="event-when"></p>
+    <p id="event-lead" class="lead"></p>
+  </section>
+
+  <div class="card" id="join">
+    <p><strong>Join it in Whereabouts.</strong> Open the app, tap <strong>Events</strong>, then <strong>Join an event</strong>, and type the code <span class="code" id="event-code">······</span>. Or tap the button below on your iPhone.</p>
+    <p><a class="button" id="open-app" href="#">Open in Whereabouts</a> <a class="button secondary" id="get-app" href="https://testflight.apple.com/join/CGgqV2Q6">Get the app (TestFlight)</a></p>
+    <p id="open-note">If nothing opened, the app isn't installed yet: get it with the second button, then come back to this page or type the code.</p>
+  </div>
+
+  <h2>How it works</h2>
+  <ol>
+    <li><strong>Join once.</strong> The event's floors download to your phone, so everything below works with the venue's network down.</li>
+    <li><strong>Say where you are.</strong> Something near you: "I'm at the elevators", "registration", a room's name. No camera, no map to read.</li>
+    <li><strong>Ask the way.</strong> "How do I get to room 204?", "Where's the HumanWare booth?", "Take me to the coffee". You're told the way in words, one stretch at a time: "Walk straight about 12 meters, past the coffee station on your right, then turn left." Say <strong>next</strong> when you're ready for the next one, <strong>repeat</strong> to hear it again, and <strong>I'm there</strong> when you arrive.</li>
+    <li><strong>Camera if you want it.</strong> For the last few meters, <strong>Guide me with the camera</strong> steers you to the exact spot, as Whereabouts does at home.</li>
+  </ol>
+  <p>Finding works on any iPhone with iOS 17 or later. Whereabouts speaks English and Arabic.</p>
+
+  <h2 id="floors-heading">Floors</h2>
+  <ul class="floors" id="floors"><li>Loading…</li></ul>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li>The map was made by the organizers. Things move at events: when something isn't where you were told, say <strong>that's not there</strong> and the organizers hear about it.</li>
+    <li>Directions describe the floor as it was scanned. They don't see people or things moved into the way; use them with your cane or guide dog, as you would any directions.</li>
+  </ul>
+</main>
+
+<footer class="bottom">
+  <div class="inner">
+    Whereabouts · <a href="../support.html">Support</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>
+  </div>
+</footer>
+<script>
+// The event named in the link (#CODE), from the cloud: name, venue, dates and
+// floors, with nothing about anyone. The code is also what the app takes.
+(function () {
+  var SERVICE = window.VISIONASSIST_SERVICE || { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
+  var code = (location.hash || "").replace(/^#/, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6);
+  var $ = function (id) { return document.getElementById(id); };
+  function text(id, value) { $(id).textContent = value; }
+  function dates(a, b) {
+    if (!a && !b) return "";
+    var opts = { month: "long", day: "numeric", year: "numeric" };
+    try {
+      var from = a ? new Date(a + "T12:00:00").toLocaleDateString(undefined, opts) : "";
+      var to = b ? new Date(b + "T12:00:00").toLocaleDateString(undefined, opts) : "";
+      if (from && to && from !== to) return from + " – " + to;
+      return from || to;
+    } catch (e) { return [a, b].filter(Boolean).join(" – "); }
+  }
+  function show(card) {
+    if (!card) {
+      text("event-name", "This event isn't open");
+      text("event-lead", "The link may be old, or the event hasn't started yet. Ask the organizers for a current one, or type the code they gave you in the app.");
+      $("floors").innerHTML = "";
+      $("floors-heading").hidden = true;
+      return;
+    }
+    document.title = card.name + " – Whereabouts";
+    text("event-name", card.name);
+    var where = [card.venue, card.city].filter(Boolean).join(", ");
+    text("event-when", [where, dates(card.starts_on, card.ends_on)].filter(Boolean).join(" · "));
+    text("event-lead", (card.org ? card.org + " mapped this event's floors with Whereabouts. " : "") + "Join it on your iPhone, say where you are, and ask the way to any room, desk or booth.");
+    text("event-code", card.code);
+    var floors = card.floors || [];
+    $("floors").innerHTML = floors.length ? "" : "<li>No floors are published yet.</li>";
+    floors.forEach(function (f) {
+      var li = document.createElement("li");
+      var label = f.floor ? "Floor " + f.floor + ": " + f.name : f.name;
+      li.textContent = label + (f.verified_at ? " (last checked " + new Date(f.verified_at).toLocaleDateString() + ")" : "");
+      $("floors").appendChild(li);
+    });
+  }
+  text("event-code", code || "······");
+  var openLink = $("open-app");
+  openLink.href = "whereabouts://event/" + code;
+  openLink.addEventListener("click", function () {
+    send("page.event_open", { code: code });
+    setTimeout(function () { $("open-note").style.display = "block"; }, 1500);
+  });
+  if (!code) { show(null); }
+  else {
+    fetch(SERVICE.url + "/rest/v1/rpc/event_card", { method: "POST",
+      headers: { apikey: SERVICE.key, "content-type": "application/json" }, body: JSON.stringify({ code: code }) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(show)
+      .catch(function () { show(null); });
+  }
+
+  // A page view for the site's Insights, as on every page.
+  function install() {
+    try {
+      var id = localStorage.getItem("va.install");
+      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, ""); localStorage.setItem("va.install", id); }
+      return id;
+    } catch (e) { return "unknown"; }
+  }
+  var session = Math.random().toString(36).slice(2);
+  function send(name, props) {
+    var event = { surface: "site", name: name, at: new Date().toISOString(), props: props || {}, install: install(), session: session, language: (navigator.language || "").slice(0, 16) };
+    try {
+      fetch(SERVICE.url + "/rest/v1/rpc/record_events", { method: "POST", keepalive: true,
+        headers: { apikey: SERVICE.key, "content-type": "application/json" }, body: JSON.stringify({ batch: [event] }) }).catch(function () {});
+    } catch (e) {}
+  }
+  var from = "";
+  try { from = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) {}
+  if (from === location.hostname) from = "";
+  send("page.view", { path: location.pathname, from: from, event: code });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (/apps\.apple\.com|testflight\.apple\.com/.test(href)) send("page.store", { where: location.pathname });
+  });
+})();
+</script>
+</body>
+</html>

@@ -75,6 +75,10 @@
   <h3 id="organizations">For organizations and sponsors</h3>
   <p>Whereabouts for an organization's clients, such as a rehabilitation agency, a school or a care home, or Plus sponsored for someone who can't pay for it: <a href="mailto:computervision226@gmail.com?subject=Whereabouts%20for%20an%20organization%2C%20or%20sponsoring%20Plus">write to us</a> for pricing.</p>
 
+  <h2 id="events">For conferences and venues</h2>
+  <p>Your own people map the venue in a morning: a floor is one scan with an iPhone Pro, naming rooms and landmarks as they go. Everyone who comes joins the event with a six-letter code, says where they are, and asks the way: "How do I get to room 204 from the elevators?", "Where's the HumanWare booth?". They're told the way in words, one stretch at a time, with the camera for the last few meters if they want it. It works with the venue's network down, and the map tells you when it's been checked. Exhibitors can be listed by the name people ask for.</p>
+  <p><a class="button" href="mailto:computervision226@gmail.com?subject=Whereabouts%20for%20an%20event">Map your event</a> <a class="button secondary" href="support.html#events">How it works for attendees</a></p>
+
   <h3 id="donate">Support Whereabouts</h3>
   <p>A donation of any amount helps keep Whereabouts going, and the first room free for everyone. Whereabouts isn't a charity, so a donation isn't tax-deductible.</p>
   <p><a class="button" href="https://donate.stripe.com/5kQ4gygH45dgeAo8wdco005">Donate</a></p>
@@ -125,6 +129,7 @@
     else if (/^editor\/?$|\/editor\/?$/.test(href)) send("page.editor", { where: location.pathname });
     else if (/donate\.stripe\.com/.test(href)) send("page.donate", { where: location.pathname });
     else if (/^mailto:/.test(href) && /organization/.test(href)) send("page.organizations", { where: location.pathname });
+    else if (/^mailto:/.test(href) && /event/.test(href)) send("page.events", { where: location.pathname });
   });
 })();
 </script>

@@ -382,6 +382,14 @@ button { cursor: pointer; }
 .plan-now { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
 .plan-now .fact { grid-template-columns: 120px minmax(0, 1fr); }
 .plan-now .on { color: var(--ok); font-weight: 600; }
+/* Events: an organization's events and floors, in the same kind of panel. */
+.ev-list, .ev-floors { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ev-list > li { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
+.ev-floors > li { display: grid; gap: 4px; padding: 8px 0 0; border-top: 1px solid var(--rule); }
+.ev-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.ev-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.14em; font-weight: 700; }
+.ev-form { display: grid; gap: 10px; padding: 12px; border: 1px dashed var(--rule-strong); border-radius: 10px; }
+.map-pin.place { border-style: dashed; }
 .offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
 .offer {
   display: grid; gap: 2px; justify-items: center; align-content: start; padding: 10px 8px; text-align: center; text-decoration: none;
@@ -625,6 +633,7 @@ button { cursor: pointer; }
     </button>
     <span class="status" id="status" data-state="ok" aria-live="polite"><span class="dot"></span><span id="status-text" data-i18n="Connected">Connected</span></span>
     <button class="btn ghost" type="button" id="plan-button" aria-pressed="false" hidden data-i18n="Rooms and Plus">Rooms and Plus</button>
+    <button class="btn ghost" type="button" id="events-button" aria-pressed="false" hidden data-i18n="Events">Events</button>
     <span class="account" id="account"></span>
     <button class="btn ghost lang-switch" type="button" data-lang-switch lang="ar">العربية</button>
     <button class="btn ghost" type="button" id="sign-out">Sign out</button>
@@ -713,6 +722,14 @@ button { cursor: pointer; }
       <button class="tool" type="button" id="plan-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
     </header>
     <div class="plan-body" id="plan-body"></div>
+  </section>
+
+  <section class="chat plan-panel" id="events-panel" hidden role="dialog" aria-labelledby="events-title">
+    <header class="chat-head">
+      <strong id="events-title" data-i18n="Events">Events</strong>
+      <button class="tool" type="button" id="events-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+    </header>
+    <div class="plan-body" id="events-body"></div>
   </section>
 </section>
 
@@ -1570,6 +1587,124 @@ const AR = {
   "“%@” was moved on the phone meanwhile, so it stays where the phone put it.": "نُقل «%@» على الهاتف في هذه الأثناء، لذلك يبقى حيث وضعه الهاتف.",
   "“%@” was pinned on the phone, so it stays where the phone put it.": "ثُبّت «%@» على الهاتف، لذلك يبقى حيث وضعه الهاتف.",
   "‹ All rooms": "‹ كل الغرف",
+  // Events and places (the Events panel, publishing a floor, a door's code).
+  "%1$@ joined · told the way %2$@ times · recognized %3$@ times · %4$@ open reports": "انضم %1$@ · أُرشدوا إلى الطريق %2$@ مرة · تعرّفت الهواتف على الطابق %3$@ مرة · %4$@ بلاغات مفتوحة",
+  "%@ is a member now.": "أصبح %@ عضوًا الآن.",
+  "%@ is made, as a draft: publish its floors, then make it live. Its join code is %@.": "أُنشئت %@ كمسودة: انشر طوابقها ثم اجعلها فعّالة. رمز الانضمام إليها هو %@.",
+  "%@ is made. Add its members by email, then make its first event.": "أُنشئت %@. أضف أعضاءها بالبريد الإلكتروني، ثم أنشئ فعاليتها الأولى.",
+  "%@ is private again: it leaves the phones it was on at their next sync.": "عادت %@ خاصة: ستغادر الهواتف التي كانت عليها عند مزامنتها التالية.",
+  "%@ said something changed": "قال %@ إن شيئًا تغيّر",
+  "1, 2, Lobby…": "1، 2، البهو…",
+  "A code for a door": "رمز لباب",
+  "A floor of %@, mapped by its organizers. You can see everything in it; they change it.": "طابق من %@، رسمه منظّموها. يمكنك رؤية كل ما فيه؛ وهم من يغيّرونه.",
+  "A public place, in no event": "مكان عام، بلا فعالية",
+  "A public place, mapped by its organizers. You can see everything in it; they change it.": "مكان عام رسمه منظّموه. يمكنك رؤية كل ما فيه؛ وهم من يغيّرونه.",
+  "AT Conference 2027": "مؤتمر التقنيات المساعدة 2027",
+  "Add a member": "إضافة عضو",
+  "Admins only: an organization whose members map floors for its events. You become its first owner, and add its members by email.": "للمشرفين فقط: منظمة يرسم أعضاؤها الطوابق لفعالياتها. تصبح مالكها الأول، وتضيف أعضاءها بالبريد الإلكتروني.",
+  "An event floor or public place: everyone who joins the event, or opens its code, has it on their phone. The people below can also change what's in it. See below to take it back.": "طابق فعالية أو مكان عام: كل من ينضم إلى الفعالية أو يفتح رمزه يحصل عليه على هاتفه. ويمكن لمن أدناه تغيير ما فيه أيضًا. انظر أدناه لاستعادته.",
+  "An organization's members map its floors with the iPhone, publish them into an event, and everyone who joins can ask the way. To set up an organization, write to us.": "يرسم أعضاء المنظمة طوابقها بالآيفون، وينشرونها في فعالية، ويمكن لكل من ينضم أن يسأل عن الطريق. لإنشاء منظمة، راسلنا.",
+  "Anaheim Marriott": "فندق أنهايم ماريوت",
+  "At the event": "في الفعالية",
+  "Before publishing a floor, each member confirms once: the owner's OK, public areas only, no one in the frame, and that the floor, its photos and its location become public to the event's attendees.": "قبل نشر طابق، يؤكد كل عضو مرة واحدة: موافقة المالك، والمناطق العامة فقط، ولا أحد في الصورة، وأن الطابق وصوره وموقعه تصبح علنية لحاضري الفعالية.",
+  "By the %@": "عند %@",
+  "Center on Disabilities": "مركز الإعاقات",
+  "City": "المدينة",
+  "Couldn't add them: %@": "تعذّرت إضافتهم: %@",
+  "Couldn't do that: %@": "تعذّر ذلك: %@",
+  "Couldn't leave it: %@": "تعذّرت مغادرتها: %@",
+  "Couldn't list it: %@": "تعذّر إدراجه: %@",
+  "Couldn't make it: %@": "تعذّر إنشاؤها: %@",
+  "Couldn't make the event: %@": "تعذّر إنشاء الفعالية: %@",
+  "Couldn't publish it: %@": "تعذّر نشره: %@",
+  "Couldn't remove it: %@": "تعذّرت إزالته: %@",
+  "Couldn't save that: %@": "تعذّر حفظ ذلك: %@",
+  "Couldn't unpublish it: %@": "تعذّر إلغاء نشره: %@",
+  "Door code": "رمز الباب",
+  "End it": "إنهاؤها",
+  "Event": "الفعالية",
+  "Event floor": "طابق فعالية",
+  "Event floors and places": "طوابق الفعاليات والأماكن",
+  "Event floors are off in this cloud.": "طوابق الفعاليات متوقفة في هذه السحابة.",
+  "Events": "الفعاليات",
+  "Events you've joined": "الفعاليات التي انضممت إليها",
+  "Everyone who joins the event gets this room on their phone as one of its floors, with its plan, its things and its photos, and can ask the way around it without a map or the camera. Name the rooms and landmarks first (Registration, Elevators, booth names): that's what people will ask for.": "كل من ينضم إلى الفعالية يحصل على هذه الغرفة على هاتفه كأحد طوابقها، بمخططها وأشيائها وصورها، ويمكنه السؤال عن الطريق فيها دون خريطة أو كاميرا. سمِّ الغرف والمعالم أولًا (التسجيل، المصاعد، أسماء الأجنحة): فهذا ما سيسأل الناس عنه.",
+  "First, confirm how you scanned it.": "أكّد أولًا كيف مسحته.",
+  "First, confirm the place's owner agreed.": "أكّد أولًا موافقة مالك المكان.",
+  "Floor %@: %@": "الطابق %@: %@",
+  "Floors and numbers": "الطوابق والأرقام",
+  "For conferences and venues": "للمؤتمرات والأماكن",
+  "From": "من",
+  "Give the event a name.": "أعطِ الفعالية اسمًا.",
+  "Hidden: it was taken down, and isn't on anyone's phone. Publish it again from its event, or write to us.": "مخفي: أُزيل، وليس على هاتف أحد. انشره مجددًا من فعاليته، أو راسلنا.",
+  "HumanWare booth": "جناح HumanWare",
+  "I confirm": "أؤكد",
+  "I scanned public areas only, with no one in the frame, and I understand the floor, its photos and its location become public to the event's attendees": "مسحت المناطق العامة فقط، دون أحد في الصورة، وأفهم أن الطابق وصوره وموقعه تصبح علنية لحاضري الفعالية",
+  "It's ended: nobody new can join it, and its floors stay as they are.": "انتهت: لا يمكن لأحد جديد الانضمام إليها، وتبقى طوابقها كما هي.",
+  "It's live: anyone with the code can join it now.": "أصبحت فعّالة: يمكن لكل من لديه الرمز الانضمام إليها الآن.",
+  "Join code to print": "رمز انضمام للطباعة",
+  "Last checked": "آخر تحقق",
+  "Last checked %@.": "آخر تحقق %@.",
+  "Leave the event": "مغادرة الفعالية",
+  "Less": "أقل",
+  "List it": "إدراجه",
+  "Listed as “%@”.": "أُدرج باسم «%@».",
+  "Listed as “%@”: people can ask for it by that name.": "مُدرج باسم «%@»: يمكن للناس طلبه بهذا الاسم.",
+  "Listed: %@": "المُدرج: %@",
+  "Loading…": "جارٍ التحميل…",
+  "Make it": "إنشاؤها",
+  "Make it live": "جعلها فعّالة",
+  "Make it live again": "جعلها فعّالة مجددًا",
+  "Make the event": "إنشاء الفعالية",
+  "New event": "فعالية جديدة",
+  "New organization": "منظمة جديدة",
+  "No confirmed account has that email yet. They make one in the app first.": "لا يوجد حساب مؤكد بهذا البريد بعد. عليهم إنشاء حساب في التطبيق أولًا.",
+  "No events yet.": "لا فعاليات بعد.",
+  "No events yet: make one under Events, at the top.": "لا فعاليات بعد: أنشئ واحدة من «الفعاليات» في الأعلى.",
+  "No floors yet: open a scanned room of yours and publish it into this event.": "لا طوابق بعد: افتح غرفة ممسوحة لك وانشرها في هذه الفعالية.",
+  "None yet. Join an event in the app with its six-letter code (Events, then Join an event); its floors then show here too, to look at.": "لا شيء بعد. انضم إلى فعالية في التطبيق برمزها المكوّن من ستة أحرف (الفعاليات، ثم انضم إلى فعالية)؛ تظهر طوابقها هنا أيضًا للاطلاع.",
+  "Only an organization's members publish floors.": "أعضاء المنظمة وحدهم ينشرون الطوابق.",
+  "Only the room's owner publishes it.": "مالك الغرفة وحده ينشرها.",
+  "Open": "فتح",
+  "Organization's name": "اسم المنظمة",
+  "Print the code": "طباعة الرمز",
+  "Public place": "مكان عام",
+  "Publish": "نشر",
+  "Publish as an event floor": "النشر كطابق فعالية",
+  "Published": "تاريخ النشر",
+  "Published as a public place.": "نُشر كمكان عام.",
+  "Published as a public place: anyone with the app who opens its code gets it on their phone, with its plan, its things and its photos.": "منشور كمكان عام: كل من لديه التطبيق ويفتح رمزه يحصل عليه على هاتفه، بمخططه وأشيائه وصوره.",
+  "Published in %@: everyone who joins it with the code %@ gets this floor on their phone, with its plan, its things and its photos, and can ask the way around it.": "منشور في %@: كل من ينضم إليها بالرمز %@ يحصل على هذا الطابق على هاتفه، بمخططه وأشيائه وصوره، ويمكنه السؤال عن الطريق فيه.",
+  "Published: everyone who joins with the code %@ has this floor.": "نُشر: كل من ينضم بالرمز %@ لديه هذا الطابق.",
+  "Publishing…": "جارٍ النشر…",
+  "Remove the listing": "إزالة الإدراج",
+  "Scan with your iPhone's camera to open this floor in Whereabouts, started from here.": "امسح الرمز بكاميرا الآيفون لتفتح هذا الطابق في Whereabouts، بدءًا من هنا.",
+  "Scan with your iPhone's camera, or open the Whereabouts app, tap Events, then Join an event, and type the code.": "امسح الرمز بكاميرا الآيفون، أو افتح تطبيق Whereabouts، ثم الفعاليات، ثم انضم إلى فعالية، واكتب الرمز.",
+  "Sign in again.": "سجّل الدخول مجددًا.",
+  "Stuck by a door, it opens this floor on a visitor's iPhone, started from that spot. Say what the code is by, as people would.": "ملصقًا عند باب، يفتح هذا الطابق على آيفون الزائر بدءًا من تلك النقطة. اذكر ما يقع الرمز عنده، كما يقوله الناس.",
+  "Thank you. You can publish floors now.": "شكرًا. يمكنك نشر الطوابق الآن.",
+  "That event has ended.": "انتهت تلك الفعالية.",
+  "That event is gone. Choose another.": "لم تعد تلك الفعالية موجودة. اختر أخرى.",
+  "The browser blocked the print page: allow pop-ups for this site and try again.": "حجب المتصفح صفحة الطباعة: اسمح بالنوافذ المنبثقة لهذا الموقع وحاول مجددًا.",
+  "The code couldn't be drawn (it needs the internet once).": "تعذّر رسم الرمز (يحتاج إلى الإنترنت مرة واحدة).",
+  "The email they sign in to Whereabouts with; the account must exist and be confirmed. Members scan floors for the organization for free and publish them into its events.": "البريد الذي يسجّلون به الدخول إلى Whereabouts؛ يجب أن يكون الحساب موجودًا ومؤكدًا. يمسح الأعضاء الطوابق للمنظمة مجانًا وينشرونها في فعالياتها.",
+  "The event has as many floors as it may hold.": "بلغت الفعالية أقصى عدد من الطوابق.",
+  "The listing is gone.": "أُزيل الإدراج.",
+  "The name attendees will ask for: a booth, a company, a desk. It's findable by that name, and the event's stats count the people walked to it.": "الاسم الذي سيطلبه الحاضرون: جناح، شركة، مكتب. يُعثر عليه بهذا الاسم، وتحصي إحصاءات الفعالية من أُرشدوا إليه.",
+  "The place's owner or operator agreed to its being mapped and shown this way": "وافق مالك المكان أو مشغّله على رسمه وعرضه بهذه الطريقة",
+  "The room's map hasn't reached the cloud yet: open the app on the phone that scanned it, with internet, and try again.": "لم تصل خريطة الغرفة إلى السحابة بعد: افتح التطبيق على الهاتف الذي مسحها، مع اتصال بالإنترنت، وحاول مجددًا.",
+  "Their email": "بريدهم الإلكتروني",
+  "This organization's plan has ended: its floors still work, but new ones can't be published. Write to us.": "انتهت خطة هذه المنظمة: طوابقها ما زالت تعمل، لكن لا يمكن نشر طوابق جديدة. راسلنا.",
+  "To": "إلى",
+  "Try again.": "حاول مجددًا.",
+  "Unpublish": "إلغاء النشر",
+  "Venue": "المكان",
+  "draft": "مسودة",
+  "ended": "منتهية",
+  "last checked %@": "آخر تحقق %@",
+  "live": "فعّالة",
+  "not checked yet": "لم يُتحقق منه بعد",
+  "the main entrance": "المدخل الرئيسي",
 };
 
 // What the phone's detector and its room scans call things (their own English
@@ -1963,6 +2098,7 @@ function showAccount() {
   $("sign-out").textContent = state.mode === "demo" ? tr("Leave the sample") : host.on ? tr("Close") : tr("Sign out");
   $("plan-button").hidden = !planAvailable();
   if (!planAvailable()) planClose();
+  showEventsButton();
 }
 
 function showWorkspace() {
@@ -2004,12 +2140,14 @@ async function signOut() {
   Object.assign(state, { mode: null, client: null, user: null, rooms: [], room: null, items: [], selectedId: null, photos: {},
     editing: false, tool: "select", shape: null,
     unsaved: new Set(), loadError: null, photosSignedAt: 0, siteMissing: false, sharingMissing: false, shares: null, confirmingPublic: false,
-    familyMissing: false, attention: [] });
+    familyMissing: false, attention: [], places: {}, eventOf: {}, placesMissing: false });
   watchTheirs();
   Object.keys(deletedHere).forEach((id) => delete deletedHere[id]);
   disposeThree();
   planForget();
+  eventsForget();
   $("plan-button").hidden = true;
+  $("events-button").hidden = true;
   $("workspace").hidden = true;
   $("signin").hidden = false;
 }
@@ -2074,7 +2212,9 @@ async function loadRooms({ openOnlyRoom = false } = {}) {
     // The rooms still show; why their counts don't is said up top.
     state.loadError = friendlyError(countError);
     state.rooms = rooms.map((r) => withLocalSite({ ...r, item_count: null, inside_count: 0 }));
+    await loadPlaces(state.rooms);
     refreshStatus();
+    showEventsButton();
     renderRoomList();
     return;
   }
@@ -2085,8 +2225,9 @@ async function loadRooms({ openOnlyRoom = false } = {}) {
   });
   state.rooms = rooms.map((r) => withLocalSite({ ...r, item_count: perRoom[r.id] || 0, inside_count: insideRoom[r.id] || 0 }));
   state.loadError = null;
-  await loadAttention();
+  await Promise.all([loadAttention(), loadPlaces(state.rooms)]);
   refreshStatus();
+  showEventsButton();
   if (openOnlyRoom && state.rooms.length === 1) {
     await openRoom(state.rooms[0].id);
   } else {
@@ -3101,15 +3242,17 @@ function renderList() {
     const card = (r) => `
       <button type="button" class="room-card${isMine(r) ? "" : " theirs"}" data-room="${esc(r.id)}">
         <span class="name">${esc(r.name || tr("Untitled room"))}</span>
-        ${isMine(r) ? (r.visibility === "public" ? `<span class="who">${tr("Public")}</span>` : "") : `<span class="who">${esc(sharedBy(r))}</span>`}
+        ${isPlace(r) ? `<span class="who">${esc(placeBadge(r))}</span>` : isMine(r) ? (r.visibility === "public" ? `<span class="who">${tr("Public")}</span>` : "") : `<span class="who">${esc(sharedBy(r))}</span>`}
         <span class="sub">${r.item_count == null ? tr("Items not counted") : countOf(r.item_count, "item")}${r.inside_count ? " · " + tr("%@ inside drawers and closets", r.inside_count) : ""}${r.map_saved_at ? " · " + tr("map updated %@", fmtDay(r.map_saved_at)) : r.scanned_at ? " · " + tr("scanned %@", fmtDay(r.scanned_at)) : ""}${!isMine(r) && r.can_edit ? " · " + tr("you can edit") : ""}</span>
       </button>`;
-    const mine = state.rooms.filter(isMine), theirs = state.rooms.filter((r) => !isMine(r));
+    const places = state.rooms.filter((r) => isPlace(r) && !isMine(r));
+    const mine = state.rooms.filter(isMine), theirs = state.rooms.filter((r) => !isMine(r) && !isPlace(r));
     const reports = state.attention || [];
     list.innerHTML = (reports.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Needs attention")}</div><div class="attention">${attentionHTML(reports, true)}</div>` : "")
-      + (theirs.length && mine.length || reports.length ? `<div class="list-heading" role="heading" aria-level="3">${theirs.length ? tr("Yours") : tr("Your rooms")}</div>` : "")
+      + ((theirs.length || places.length) && mine.length || reports.length ? `<div class="list-heading" role="heading" aria-level="3">${theirs.length || places.length ? tr("Yours") : tr("Your rooms")}</div>` : "")
       + (mine.length ? mine.map(card).join("") : `<div class="list-empty">${tr("No rooms of your own yet. Scan a room with the iPhone app while signed in, and it appears here.")}</div>`)
-      + (theirs.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Shared with you")}</div>${theirs.map(card).join("")}` : "");
+      + (theirs.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Shared with you")}</div>${theirs.map(card).join("")}` : "")
+      + (places.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Event floors and places")}</div>${places.map(card).join("")}` : "");
     return;
   }
   list.setAttribute("aria-label", tr("Items"));
@@ -3213,7 +3356,7 @@ function buildInspector() {
         const reports = (state.attention || []).filter((r) => idKey(r.room_id) === idKey(state.room.id));
         return reports.length ? `<div class="field"><div class="section-title"><label>${tr("Needs attention")}</label></div><div class="attention">${attentionHTML(reports, false)}</div></div>` : "";
       })()}
-      ${theirs ? ownerNoteHTML(state.room) : state.mode === "remote" ? sharingHTML(state.room) : ""}
+      ${theirs ? ownerNoteHTML(state.room) : state.mode === "remote" ? sharingHTML(state.room) + placeSectionHTML(state.room) : ""}
       ${bounds ? `<div class="facts"><dl style="margin:0;display:grid;gap:6px">
         <div class="fact"><dt>${tr("Floor size")}</dt><dd class="data">${fmtM(bounds.w)} × ${fmtM(bounds.d)}</dd></div>
         <div class="fact"><dt>${tr("Ceiling")}</dt><dd class="data">${fmtM(bounds.h)}</dd></div>
@@ -3279,6 +3422,7 @@ function buildInspector() {
       <select id="insp-category"${ro ? " disabled" : ""}>${CATEGORIES.map((c) => `<option value="${c}" ${categoryOf(item) === c ? "selected" : ""}>${esc(categoryName(c))}</option>`).join("")}</select></div>
     ${box && !ro && state.editing ? `<div class="field"><div class="section-title"><label>${tr("Its shape on the plan")}</label></div>${furnitureFieldsHTML(box)}</div>` : ""}
     ${ro && !item.note ? "" : `<div class="field"><label for="insp-note">${tr("Note")}</label><textarea id="insp-note" rows="2" dir="auto"${ro ? " readonly" : ` placeholder="${esc(tr("Where exactly, what it's for, anything that helps find it"))}"`}>${esc(item.note || "")}</textarea></div>`}
+    ${listingHTML(item)}
     ${state.mode === "remote" && state.familyMissing ? "" : ro && !item.feel ? "" : `<div class="field"><label for="insp-feel">${tr("How it feels")}</label><textarea id="insp-feel" rows="2" dir="auto"${ro ? " readonly" : ` placeholder="${esc(tr("Smooth glass jar, metal lid, cold"))}"`}>${esc(item.feel || "")}</textarea>
       ${ro ? "" : `<span class="hint">${tr("Read out on the phone when someone reaches it, so they know it's the right thing.")}</span>`}</div>`}
     ${closeups}${whereInside}
@@ -3764,6 +3908,522 @@ async function planCheck(waiting) {
   else if (!waiting && before) plan.message = tr("Nothing new has reached %@ yet. If you've just paid, wait a minute and check again.", state.user?.email || "");
   else if (waiting && plan.paying) usage.log("plan.paid", false, { what: plan.paying.what });
   if (!$("plan-panel").hidden) renderPlan();
+}
+
+// ----- Events and places: floors an organization maps for everyone -----
+// A room an organization's member scanned can be published as an event floor
+// (into one of the organization's events, which attendees join by its code)
+// or as a public place. What everyone may know about it is its places row;
+// the rules are the cloud's (cloud/supabase-setup.sql, Events and places).
+// Here: the Events panel (the organizations this account belongs to, their
+// events with the join code and its QR, each floor and when it was last
+// checked, who joined and how often people were told the way; and the events
+// this account joined as an attendee), publishing a room from its panel,
+// printing a door's QR code, and listing a booth by the name people ask for.
+const events = { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, loading: false, busy: false };
+
+/** Whether this editor deals in events: signed in to a cloud that has them. */
+function eventsAvailable() {
+  return state.mode === "remote" && !!state.client && !!state.user?.id && !state.sharingMissing && !state.placesMissing;
+}
+
+const SITE_ORIGIN = "https://whereabout.store";
+/** The link a door's QR carries: the floor, and the landmark the code is by (dashes for spaces). */
+const placeLink = (roomId, landmark) => `${SITE_ORIGIN}/place/#${idKey(roomId)}${landmark ? "." + encodeURIComponent(String(landmark).trim().replace(/\s+/g, "-").slice(0, 60)) : ""}`;
+/** The link an event's QR carries. */
+const eventLink = (code) => `${SITE_ORIGIN}/event/#${String(code || "").toUpperCase()}`;
+
+const placeOf = (room) => (room ? own(state.places || {}, idKey(room.id)) : undefined);
+const eventOf = (room) => (room ? own(state.eventOf || {}, idKey(room.id)) : undefined);
+const isPlace = (room) => room?.visibility === "place";
+
+/** What everyone may know about the listed rooms that are floors or places, and this
+ *  account's organizations: loaded with the rooms. A cloud from before events: nothing. */
+async function loadPlaces(rooms) {
+  state.places = {};
+  state.eventOf = {};
+  state.placesMissing = false;
+  events.orgs = null;
+  events.mine = null;
+  events.isAdmin = false;
+  if (state.mode !== "remote" || state.sharingMissing || !state.client) return;
+  const ids = (rooms || []).filter(isPlace).map((r) => r.id);
+  const none = Promise.resolve({ data: [], error: null });
+  const [placesAnswer, floorsAnswer, orgsAnswer, mineAnswer, adminAnswer] = await Promise.all([
+    ids.length ? state.client.from("places").select("room_id,org_id,name,category,address,floor,status,verified_at,published_at,sponsor").in("room_id", ids) : none,
+    ids.length ? state.client.from("event_places").select("room_id,floor,event:org_events(id,code,name,status)").in("room_id", ids) : none,
+    state.client.rpc("my_orgs"),
+    state.client.rpc("my_events"),
+    state.client.rpc("is_admin"),
+  ]);
+  if (["42P01", "42703", "42883", "PGRST202"].includes(String(orgsAnswer.error?.code || placesAnswer.error?.code || ""))) {
+    state.placesMissing = true;    // (a cloud from before events: everything else as before)
+    return;
+  }
+  (placesAnswer.data || []).forEach((p) => { state.places[idKey(p.room_id)] = p; });
+  (floorsAnswer.data || []).forEach((f) => { if (f.event) state.eventOf[idKey(f.room_id)] = { ...f.event, floor: f.floor }; });
+  events.orgs = orgsAnswer.error ? [] : Array.isArray(orgsAnswer.data) ? orgsAnswer.data : [];
+  events.mine = mineAnswer.error ? [] : Array.isArray(mineAnswer.data) ? mineAnswer.data : [];
+  events.isAdmin = !adminAnswer.error && adminAnswer.data === true;
+}
+
+/** The Events button: for an organization's members, admins, and anyone who joined an event. */
+function showEventsButton() {
+  const show = eventsAvailable() && ((events.orgs || []).length > 0 || events.isAdmin || (events.mine || []).length > 0);
+  $("events-button").hidden = !show;
+  if (!show) eventsClose();
+}
+
+/** "Event floor · AT Conference 2027" or "Public place", for a card or a pin. */
+function placeBadge(room) {
+  const ev = eventOf(room);
+  if (ev) return `${tr("Event floor")} · ${ev.name || ev.code}`;
+  return tr("Public place");
+}
+
+/** An organization's events, for the publish form and the panel (loaded once, refreshed on changes). */
+async function loadOrgEvents(orgId, { force = false } = {}) {
+  if (!orgId || (events.orgEvents[orgId] && !force)) return events.orgEvents[orgId] || [];
+  const { data, error } = await state.client.rpc("events_of_org", { org: orgId });
+  events.orgEvents[orgId] = error ? [] : Array.isArray(data) ? data : [];
+  return events.orgEvents[orgId];
+}
+
+/** An event's floors and listings, and how it's doing. */
+async function loadEventDetails(eventId) {
+  const [details, stats] = await Promise.all([state.client.rpc("event_details", { event: eventId }), state.client.rpc("event_stats", { event: eventId })]);
+  events.details[eventId] = details.error ? null : details.data;
+  events.stats[eventId] = stats.error ? null : stats.data;
+}
+
+// --- The room's panel: publishing it, or what it is as a floor ---
+
+/** For a room of this account with its map in the cloud: publish it as an event floor or a place, or what it is as one. */
+function placeSectionHTML(room) {
+  if (!eventsAvailable() || !isMine(room)) return "";
+  const orgs = events.orgs || [];
+  const place = placeOf(room);
+  const ev = eventOf(room);
+  if (isPlace(room)) {
+    const hidden = place && place.status !== "published";
+    return `<div class="field" id="place-section">
+      <div class="section-title"><label>${ev ? tr("Event floor") : tr("Public place")}</label></div>
+      <span class="help">${hidden ? tr("Hidden: it was taken down, and isn't on anyone's phone. Publish it again from its event, or write to us.")
+        : ev ? tr("Published in %@: everyone who joins it with the code %@ gets this floor on their phone, with its plan, its things and its photos, and can ask the way around it.", esc(ev.name || ""), `<span class="ev-code" dir="ltr">${esc(ev.code || "")}</span>`)
+        : tr("Published as a public place: anyone with the app who opens its code gets it on their phone, with its plan, its things and its photos.")}</span>
+      <dl style="margin:0;display:grid;gap:6px">
+        ${place?.floor || ev?.floor ? `<div class="fact"><dt>${tr("Floor")}</dt><dd>${esc(place?.floor || ev?.floor)}</dd></div>` : ""}
+        ${place?.verified_at ? `<div class="fact"><dt>${tr("Last checked")}</dt><dd>${esc(fmtWhen(place.verified_at))}</dd></div>` : ""}
+        ${place?.published_at ? `<div class="fact"><dt>${tr("Published")}</dt><dd>${esc(fmtWhen(place.published_at))}</dd></div>` : ""}
+      </dl>
+      <div class="field"><label for="place-landmark">${tr("A code for a door")}</label>
+        <div class="thing"><input id="place-landmark" dir="auto" placeholder="${esc(tr("the main entrance"))}" maxlength="60"><button type="button" class="btn" id="place-door-qr">${tr("Print the code")}</button></div>
+        <span class="hint">${tr("Stuck by a door, it opens this floor on a visitor's iPhone, started from that spot. Say what the code is by, as people would.")}</span>
+      </div>
+      <div class="row"><button type="button" class="btn" id="place-unpublish"${events.busy ? " disabled" : ""}>${tr("Unpublish")}</button></div>
+    </div>`;
+  }
+  if (!orgs.length) return "";
+  if (!room.map_saved_at && !room.scanned_at) return "";
+  const options = [];
+  orgs.forEach((org) => {
+    const list = events.orgEvents[org.id];
+    if (list === undefined) loadOrgEvents(org.id).then(() => { if (state.room?.id === room.id) renderInspector(); });
+    (list || []).filter((e) => e.status !== "ended").forEach((e) => options.push(`<option value="${esc(e.id)}" data-org="${esc(org.id)}">${esc(orgs.length > 1 ? `${org.name}: ${e.name}` : e.name)}${e.status === "draft" ? ` (${tr("draft")})` : ""}</option>`));
+  });
+  const pledged = orgs.some((o) => o.pledged);
+  const form = events.forms.publish || {};
+  return `<div class="field" id="place-section">
+    <div class="section-title"><label>${tr("Publish as an event floor")}</label></div>
+    <span class="help">${tr("Everyone who joins the event gets this room on their phone as one of its floors, with its plan, its things and its photos, and can ask the way around it without a map or the camera. Name the rooms and landmarks first (Registration, Elevators, booth names): that's what people will ask for.")}</span>
+    <div class="field"><label for="place-event">${tr("Event")}</label>
+      <select id="place-event">${options.join("")}<option value=""${!options.length ? " selected" : ""}>${tr("A public place, in no event")}</option></select>
+      ${!options.length ? `<span class="hint">${tr("No events yet: make one under Events, at the top.")}</span>` : ""}
+    </div>
+    <div class="field"><label for="place-floor">${tr("Floor")}</label><input id="place-floor" dir="auto" placeholder="${esc(tr("1, 2, Lobby…"))}" maxlength="40" value="${esc(form.floor || "")}"></div>
+    <label class="can-edit wide"><input type="checkbox" id="place-owner-ok"${form.ownerOk ? " checked" : ""}> ${tr("The place's owner or operator agreed to its being mapped and shown this way")}</label>
+    ${pledged ? "" : `<label class="can-edit wide"><input type="checkbox" id="place-pledge"${form.pledge ? " checked" : ""}> ${tr("I scanned public areas only, with no one in the frame, and I understand the floor, its photos and its location become public to the event's attendees")}</label>`}
+    <div class="row"><button type="button" class="btn primary" id="place-publish"${events.busy ? " disabled" : ""}>${events.busy ? tr("Publishing…") : tr("Publish")}</button></div>
+  </div>`;
+}
+
+// Why publishing was refused (publish_place's answers), said when it happens.
+const PUBLISH_PROBLEMS = {
+  places_off: N_("Event floors are off in this cloud."),
+  not_owner: N_("Only the room's owner publishes it."),
+  no_map: N_("The room's map hasn't reached the cloud yet: open the app on the phone that scanned it, with internet, and try again."),
+  owner_ok: N_("First, confirm the place's owner agreed."),
+  event_not_found: N_("That event is gone. Choose another."),
+  ended: N_("That event has ended."),
+  not_member: N_("Only an organization's members publish floors."),
+  needs_pledge: N_("First, confirm how you scanned it."),
+  event_limit: N_("The event has as many floors as it may hold."),
+  sign_in: N_("Sign in again."),
+};
+
+/** Publishes the open room as an event floor, or a public place, from its panel. */
+async function publishRoom() {
+  const room = state.room;
+  if (!room || !canEdit() || !eventsAvailable() || events.busy) return;
+  const select = $("place-event");
+  const eventId = select?.value || null;
+  const floor = ($("place-floor")?.value || "").trim();
+  const ownerOk = !!$("place-owner-ok")?.checked;
+  const pledgeBox = $("place-pledge");
+  events.forms.publish = { floor, ownerOk, pledge: !!pledgeBox?.checked };
+  if (!ownerOk) { flash(tr("First, confirm the place's owner agreed.")); $("place-owner-ok")?.focus(); return; }
+  if (pledgeBox && !pledgeBox.checked) { flash(tr("First, confirm how you scanned it.")); pledgeBox.focus(); return; }
+  const orgId = eventId ? select.selectedOptions[0]?.dataset.org : (events.orgs || [])[0]?.id;
+  events.busy = true;
+  renderInspector();
+  let answer = null, error = null;
+  try {
+    if (pledgeBox && orgId) {
+      const pledged = await state.client.rpc("pledge_org_member", { org: orgId });
+      if (!pledged.error) {
+        (events.orgs || []).forEach((o) => { if (o.id === orgId) o.pledged = true; });
+        usage.log("org.pledge", true);
+      }
+    }
+    const placement = placementOf(room);
+    const geo = room.layout?.geo || room.geo || null;
+    ({ data: answer, error } = await state.client.rpc("publish_place", {
+      room: room.id, name: room.name || "", category: "", address: String(room.site?.address || ""),
+      lat: placement ? placement.origin[1] : null, lng: placement ? placement.origin[0] : null,
+      accuracy: Number.isFinite(geo?.accuracy) ? geo.accuracy : null,
+      floor, owner_ok: ownerOk, event: eventId,
+    }));
+  } catch (thrown) {
+    error = thrown;
+  }
+  events.busy = false;
+  let problem = null;
+  if (error) problem = tr(friendlyError(error));
+  else if (answer?.error) problem = own(PUBLISH_PROBLEMS, answer.error) ? tr(PUBLISH_PROBLEMS[answer.error]) : String(answer.error);
+  usage.log("place.publish", !problem, problem ? { error: String(answer?.error || problem) } : { event: !!eventId });
+  if (problem) { flash(tr("Couldn't publish it: %@", problem)); renderInspector(); return; }
+  events.forms.publish = null;
+  setVisibilityHere(room.id, "place");
+  await loadPlaces(state.rooms);
+  if (eventId) { delete events.details[eventId]; delete events.stats[eventId]; (events.orgs || []).forEach((o) => loadOrgEvents(o.id, { force: true })); }
+  showEventsButton();
+  const code = answer?.place?.event_code;
+  flash(code ? tr("Published: everyone who joins with the code %@ has this floor.", code) : tr("Published as a public place."));
+  if (state.room?.id === room.id) renderInspector();
+  renderList();
+}
+
+async function unpublishRoom() {
+  const room = state.room;
+  if (!room || !canEdit() || !eventsAvailable() || events.busy) return;
+  events.busy = true;
+  renderInspector();
+  let error = null, done = false;
+  try {
+    const answer = await state.client.rpc("unpublish_place", { room: room.id });
+    error = answer.error;
+    done = !error && answer.data === true;
+  } catch (thrown) {
+    error = thrown;
+  }
+  events.busy = false;
+  usage.log("place.unpublish", done, error ? { error: friendlyError(error) } : {});
+  if (!done) { flash(tr("Couldn't unpublish it: %@", error ? tr(friendlyError(error)) : tr("Try again."))); renderInspector(); return; }
+  setVisibilityHere(room.id, "private");
+  await loadPlaces(state.rooms);
+  Object.keys(events.details).forEach((id) => { delete events.details[id]; delete events.stats[id]; });
+  flash(tr("%@ is private again: it leaves the phones it was on at their next sync.", room.name || tr("The room")));
+  if (state.room?.id === room.id) renderInspector();
+  renderList();
+}
+
+// --- Listing a booth or a desk by the name people will ask for ---
+
+/** For an item on an event floor of this account's organization: list it at the event under a name. */
+function listingHTML(item) {
+  const room = state.room;
+  const ev = eventOf(room);
+  if (!ev || !eventsAvailable() || !(events.orgs || []).length) return "";
+  const listed = (events.details[ev.id]?.listings || []).find((l) => idKey(l.item_id) === idKey(item.id));
+  if (events.details[ev.id] === undefined) loadEventDetails(ev.id).then(() => { if (state.selectedId === item.id) renderInspector(); });
+  return `<div class="field" id="listing-section">
+    <div class="section-title"><label for="listing-title">${tr("At the event")}</label></div>
+    ${listed ? `<span class="help">${tr("Listed as “%@”: people can ask for it by that name.", esc(listed.title))}</span><div class="row"><button type="button" class="btn ghost" data-remove-listing="${esc(listed.id)}">${tr("Remove the listing")}</button></div>`
+      : `<div class="thing"><input id="listing-title" dir="auto" placeholder="${esc(tr("HumanWare booth"))}" maxlength="120" value="${esc(item.name || "")}"><button type="button" class="btn" id="listing-add">${tr("List it")}</button></div>
+         <span class="hint">${tr("The name attendees will ask for: a booth, a company, a desk. It's findable by that name, and the event's stats count the people walked to it.")}</span>`}
+  </div>`;
+}
+
+async function addListing() {
+  const item = state.items.find((i) => i.id === state.selectedId), room = state.room, ev = eventOf(room);
+  const title = ($("listing-title")?.value || "").trim();
+  if (!item || !ev || !title) { $("listing-title")?.focus(); return; }
+  const { error } = await state.client.rpc("add_listing", { event: ev.id, item: item.id, title, sponsor: "", paid: false, url: "" });
+  usage.log("event.listing", !error, error ? { error: friendlyError(error) } : {});
+  if (error) { flash(tr("Couldn't list it: %@", tr(friendlyError(error)))); return; }
+  await loadEventDetails(ev.id);
+  flash(tr("Listed as “%@”.", title));
+  renderInspector();
+}
+
+async function removeListing(id) {
+  const ev = eventOf(state.room);
+  const { error } = await state.client.rpc("remove_listing", { listing: id });
+  if (error) { flash(tr("Couldn't remove it: %@", tr(friendlyError(error)))); return; }
+  if (ev) await loadEventDetails(ev.id);
+  flash(tr("The listing is gone."));
+  renderInspector();
+}
+
+// --- The Events panel ---
+
+async function eventsRefresh() {
+  if (!eventsAvailable()) return;
+  events.loading = true;
+  renderEvents();
+  const [orgs, mine] = await Promise.all([state.client.rpc("my_orgs"), state.client.rpc("my_events")]);
+  if (!orgs.error) events.orgs = Array.isArray(orgs.data) ? orgs.data : [];
+  if (!mine.error) events.mine = Array.isArray(mine.data) ? mine.data : [];
+  await Promise.all((events.orgs || []).map((o) => loadOrgEvents(o.id, { force: true })));
+  events.loading = false;
+  renderEvents();
+  showEventsButton();
+}
+
+function eventsOpen() {
+  if (!eventsAvailable()) return;
+  chatClose();
+  planClose();
+  events.message = null;
+  $("events-panel").hidden = false;
+  $("events-button").setAttribute("aria-pressed", "true");
+  usage.log("events.open", null, { member: (events.orgs || []).length > 0, admin: events.isAdmin });
+  renderEvents();
+  $("events-body").scrollTop = 0;
+  eventsRefresh();
+  $("events-close").focus();
+}
+
+function eventsClose() {
+  $("events-panel").hidden = true;
+  $("events-button").setAttribute("aria-pressed", "false");
+}
+
+/** Signed out: nothing of the account's left here. */
+function eventsForget() {
+  eventsClose();
+  Object.assign(events, { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, loading: false, busy: false });
+}
+
+const EVENT_STATUS = { draft: N_("draft"), live: N_("live"), ended: N_("ended") };
+
+function eventItemHTML(org, e) {
+  const open = !!events.open[e.id];
+  const details = events.details[e.id], stats = events.stats[e.id];
+  const floors = details?.places || [];
+  const when = [e.venue, e.starts_on ? fmtDay(e.starts_on) : ""].filter(Boolean).join(" · ");
+  let more = "";
+  if (open) {
+    if (details === undefined) more = `<span class="help">${tr("Loading…")}</span>`;
+    else more = `
+      ${stats ? `<span class="help">${esc(tr("%1$@ joined · told the way %2$@ times · recognized %3$@ times · %4$@ open reports", stats.joined ?? 0, stats.asked ?? 0, stats.recognized ?? 0, stats.reports_open ?? 0))}${Number(stats.problems) ? " · " + esc(tr("%@ said something changed", stats.problems)) : ""}</span>` : ""}
+      ${floors.length ? `<ul class="ev-floors">${floors.map((f) => `<li><span>${esc(f.floor ? tr("Floor %@: %@", f.floor, f.name) : f.name)}</span><span class="help">${f.verified_at ? esc(tr("last checked %@", fmtDay(f.verified_at))) : tr("not checked yet")}</span>
+          <span class="ev-row"><button type="button" class="btn ghost" data-open-room="${esc(f.room_id)}">${tr("Open")}</button><button type="button" class="btn ghost" data-door-qr="${esc(f.room_id)}" data-door-name="${esc(f.name)}">${tr("Door code")}</button></span></li>`).join("")}</ul>`
+        : `<span class="help">${tr("No floors yet: open a scanned room of yours and publish it into this event.")}</span>`}
+      ${(details?.listings || []).length ? `<span class="help">${esc(tr("Listed: %@", joinList(details.listings.map((l) => l.title))))}</span>` : ""}`;
+  }
+  return `<li>
+    <div class="ev-row"><strong>${esc(e.name)}</strong><span class="ev-code" dir="ltr">${esc(e.code)}</span><span class="badge ${e.status === "live" ? "shared" : "public"}">${esc(own(EVENT_STATUS, e.status) ? tr(EVENT_STATUS[e.status]) : e.status)}</span></div>
+    ${when ? `<span class="help">${esc(when)}</span>` : ""}
+    <div class="ev-row">
+      <button type="button" class="btn ghost" data-event-more="${esc(e.id)}" aria-expanded="${open}">${open ? tr("Less") : tr("Floors and numbers")}</button>
+      <button type="button" class="btn ghost" data-event-qr="${esc(e.id)}" data-code="${esc(e.code)}" data-name="${esc(e.name)}">${tr("Join code to print")}</button>
+      ${e.status === "draft" ? `<button type="button" class="btn" data-event-status="live" data-event="${esc(e.id)}">${tr("Make it live")}</button>` : ""}
+      ${e.status === "live" ? `<button type="button" class="btn ghost" data-event-status="ended" data-event="${esc(e.id)}">${tr("End it")}</button>` : ""}
+      ${e.status === "ended" ? `<button type="button" class="btn ghost" data-event-status="live" data-event="${esc(e.id)}">${tr("Make it live again")}</button>` : ""}
+    </div>
+    ${more}
+  </li>`;
+}
+
+function orgSectionHTML(org) {
+  const list = events.orgEvents[org.id];
+  const form = events.forms["event:" + org.id];
+  const member = events.forms["member:" + org.id];
+  return `<section>
+    <h3>${esc(org.name)}</h3>
+    ${org.plan_active === false ? `<p class="help warn">${tr("This organization's plan has ended: its floors still work, but new ones can't be published. Write to us.")}</p>` : ""}
+    ${org.pledged ? "" : `<p class="help">${tr("Before publishing a floor, each member confirms once: the owner's OK, public areas only, no one in the frame, and that the floor, its photos and its location become public to the event's attendees.")}</p><p><button type="button" class="btn" data-pledge="${esc(org.id)}">${tr("I confirm")}</button></p>`}
+    ${list === undefined || events.loading && !list ? `<p class="help">${tr("Loading…")}</p>` : list.length ? `<ul class="ev-list">${list.map((e) => eventItemHTML(org, e)).join("")}</ul>` : `<p class="help">${tr("No events yet.")}</p>`}
+    ${form ? `<div class="ev-form" role="group" aria-label="${esc(tr("New event"))}">
+      <div class="field"><label for="ev-name">${tr("Name")}</label><input id="ev-name" dir="auto" maxlength="120" placeholder="${esc(tr("AT Conference 2027"))}"></div>
+      <div class="field"><label for="ev-venue">${tr("Venue")}</label><input id="ev-venue" dir="auto" maxlength="160" placeholder="${esc(tr("Anaheim Marriott"))}"></div>
+      <div class="field"><label for="ev-city">${tr("City")}</label><input id="ev-city" dir="auto" maxlength="80"></div>
+      <div class="ev-row"><div class="field"><label for="ev-from">${tr("From")}</label><input id="ev-from" type="date"></div><div class="field"><label for="ev-to">${tr("To")}</label><input id="ev-to" type="date"></div></div>
+      <div class="row"><button type="button" class="btn primary" id="ev-create" data-org="${esc(org.id)}">${tr("Make the event")}</button><button type="button" class="btn ghost" data-new-event="${esc(org.id)}">${tr("Cancel")}</button></div>
+    </div>` : `<p><button type="button" class="btn" data-new-event="${esc(org.id)}">${tr("New event")}</button>${org.role === "owner" || events.isAdmin ? ` <button type="button" class="btn ghost" data-new-member="${esc(org.id)}">${tr("Add a member")}</button>` : ""}</p>`}
+    ${member ? `<div class="ev-form" role="group" aria-label="${esc(tr("Add a member"))}">
+      <div class="field"><label for="ev-member">${tr("Their email")}</label><div class="thing"><input id="ev-member" type="email" dir="ltr" placeholder="their@email.com" autocomplete="off" spellcheck="false"><button type="button" class="btn" id="ev-member-add" data-org="${esc(org.id)}">${tr("Add")}</button></div>
+      <span class="hint">${tr("The email they sign in to Whereabouts with; the account must exist and be confirmed. Members scan floors for the organization for free and publish them into its events.")}</span></div>
+    </div>` : ""}
+  </section>`;
+}
+
+function renderEvents() {
+  const body = $("events-body");
+  const orgs = events.orgs || [], mine = events.mine || [];
+  const parts = [];
+  if (events.message) parts.push(`<p class="notice info" role="status">${esc(events.message)}</p>`);
+  orgs.forEach((org) => parts.push(orgSectionHTML(org)));
+  if (events.isAdmin) {
+    parts.push(`<section><h3>${tr("New organization")}</h3>
+      <p class="help">${tr("Admins only: an organization whose members map floors for its events. You become its first owner, and add its members by email.")}</p>
+      <div class="thing"><input id="org-name" dir="auto" maxlength="120" placeholder="${esc(tr("Center on Disabilities"))}" aria-label="${esc(tr("Organization's name"))}"><button type="button" class="btn" id="org-create">${tr("Make it")}</button></div></section>`);
+  }
+  if (!orgs.length && !events.isAdmin) {
+    const mail = String(PRICES.organizations || "").trim();
+    parts.push(`<section><h3>${tr("For conferences and venues")}</h3>
+      <p class="help">${tr("An organization's members map its floors with the iPhone, publish them into an event, and everyone who joins can ask the way. To set up an organization, write to us.")}</p>
+      ${mail ? `<p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${encodeURIComponent("Whereabouts for an event")}" dir="ltr" data-write-events>${esc(mail)}</a></p>` : ""}</section>`);
+  }
+  parts.push(`<section><h3>${tr("Events you've joined")}</h3>
+    ${mine.length ? `<ul class="ev-list">${mine.map((e) => `<li><div class="ev-row"><strong>${esc(e.name)}</strong><span class="ev-code" dir="ltr">${esc(e.code)}</span></div>
+        <span class="help">${esc([e.venue, e.city].filter(Boolean).join(", "))}${e.places != null ? (e.venue || e.city ? " · " : "") + esc(countOf(Number(e.places) || 0, "floor")) : ""}</span>
+        <div class="ev-row"><button type="button" class="btn ghost" data-leave-event="${esc(e.code)}">${tr("Leave the event")}</button></div></li>`).join("")}</ul>`
+      : `<p class="help">${tr("None yet. Join an event in the app with its six-letter code (Events, then Join an event); its floors then show here too, to look at.")}</p>`}</section>`);
+  body.innerHTML = parts.join("");
+}
+
+/** What the panel's buttons do. */
+async function eventsClick(e) {
+  const t = e.target;
+  const pledge = t.closest("[data-pledge]");
+  if (pledge) {
+    const { error } = await state.client.rpc("pledge_org_member", { org: pledge.dataset.pledge });
+    usage.log("org.pledge", !error);
+    if (error) { flash(tr("Couldn't save that: %@", tr(friendlyError(error)))); return; }
+    (events.orgs || []).forEach((o) => { if (o.id === pledge.dataset.pledge) o.pledged = true; });
+    events.message = tr("Thank you. You can publish floors now.");
+    renderEvents();
+    return;
+  }
+  const newEvent = t.closest("[data-new-event]");
+  if (newEvent) { const key = "event:" + newEvent.dataset.newEvent; events.forms[key] = !events.forms[key]; renderEvents(); $("ev-name")?.focus(); return; }
+  const newMember = t.closest("[data-new-member]");
+  if (newMember) { const key = "member:" + newMember.dataset.newMember; events.forms[key] = !events.forms[key]; renderEvents(); $("ev-member")?.focus(); return; }
+  if (t.closest("#ev-create")) {
+    const org = t.closest("#ev-create").dataset.org;
+    const name = ($("ev-name")?.value || "").trim();
+    if (!name) { flash(tr("Give the event a name.")); $("ev-name")?.focus(); return; }
+    const { data, error } = await state.client.rpc("create_event", { org, name, venue: ($("ev-venue")?.value || "").trim(), city: ($("ev-city")?.value || "").trim(),
+      starts_on: $("ev-from")?.value || null, ends_on: $("ev-to")?.value || null, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null });
+    usage.log("event.create", !error, error ? { error: friendlyError(error) } : {});
+    if (error) { flash(tr("Couldn't make the event: %@", tr(friendlyError(error)))); return; }
+    delete events.forms["event:" + org];
+    await loadOrgEvents(org, { force: true });
+    events.message = tr("%@ is made, as a draft: publish its floors, then make it live. Its join code is %@.", name, data?.code || "");
+    renderEvents();
+    return;
+  }
+  if (t.closest("#ev-member-add")) {
+    const org = t.closest("#ev-member-add").dataset.org;
+    const email = ($("ev-member")?.value || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { flash(tr("Type the email they sign in with, like maria@example.com.")); $("ev-member")?.focus(); return; }
+    const { data, error } = await state.client.rpc("add_org_member", { org, email, role: "member" });
+    usage.log("org.member", !error && data === true, error ? { error: friendlyError(error) } : { found: data === true });
+    if (error) { flash(tr("Couldn't add them: %@", tr(friendlyError(error)))); return; }
+    if (data !== true) { flash(tr("No confirmed account has that email yet. They make one in the app first.")); return; }
+    delete events.forms["member:" + org];
+    events.message = tr("%@ is a member now.", email);
+    renderEvents();
+    return;
+  }
+  if (t.closest("#org-create")) {
+    const name = ($("org-name")?.value || "").trim();
+    if (!name) { $("org-name")?.focus(); return; }
+    const { error } = await state.client.rpc("create_org", { name, contact_email: state.user?.email || null });
+    usage.log("org.create", !error, error ? { error: friendlyError(error) } : {});
+    if (error) { flash(tr("Couldn't make it: %@", tr(friendlyError(error)))); return; }
+    events.message = tr("%@ is made. Add its members by email, then make its first event.", name);
+    await eventsRefresh();
+    return;
+  }
+  const more = t.closest("[data-event-more]");
+  if (more) {
+    const id = more.dataset.eventMore;
+    events.open[id] = !events.open[id];
+    renderEvents();
+    if (events.open[id]) { await loadEventDetails(id); renderEvents(); }
+    return;
+  }
+  const status = t.closest("[data-event-status]");
+  if (status) {
+    const { data, error } = await state.client.rpc("set_event_status", { event: status.dataset.event, status: status.dataset.eventStatus });
+    usage.log("event.status", !error && data === true, { status: status.dataset.eventStatus });
+    if (error || data !== true) { flash(tr("Couldn't change that: %@", error ? tr(friendlyError(error)) : tr("Try again."))); return; }
+    await Promise.all((events.orgs || []).map((o) => loadOrgEvents(o.id, { force: true })));
+    events.message = status.dataset.eventStatus === "live" ? tr("It's live: anyone with the code can join it now.") : tr("It's ended: nobody new can join it, and its floors stay as they are.");
+    renderEvents();
+    return;
+  }
+  const evQR = t.closest("[data-event-qr]");
+  if (evQR) {
+    usage.log("event.qr");
+    qrPrint({ title: evQR.dataset.name, big: evQR.dataset.code, link: eventLink(evQR.dataset.code),
+      caption: tr("Scan with your iPhone's camera, or open the Whereabouts app, tap Events, then Join an event, and type the code."),
+      captionAr: "امسح الرمز بكاميرا الآيفون، أو افتح تطبيق Whereabouts، ثم الفعاليات، ثم انضم إلى فعالية، واكتب الرمز." });
+    return;
+  }
+  const door = t.closest("[data-door-qr]");
+  if (door) { doorQR(door.dataset.doorQr, door.dataset.doorName, ""); return; }
+  const openRoomButton = t.closest("[data-open-room]");
+  if (openRoomButton) { eventsClose(); openRoom(openRoomButton.dataset.openRoom); return; }
+  const leave = t.closest("[data-leave-event]");
+  if (leave) {
+    const { error } = await state.client.rpc("leave_event", { code: leave.dataset.leaveEvent });
+    if (error) { flash(tr("Couldn't leave it: %@", tr(friendlyError(error)))); return; }
+    usage.log("event.leave");
+    await eventsRefresh();
+    await loadRooms();
+    return;
+  }
+  if (t.closest("[data-write-events]")) usage.log("plan.organizations", null, { events: true });
+}
+
+/** A door's QR code for a floor: the floor's name, the landmark the code is by, the link. */
+function doorQR(roomId, name, landmark) {
+  usage.log("place.qr", null, { landmark: !!landmark });
+  qrPrint({ title: name || tr("Floor"), big: landmark ? tr("By the %@", landmark) : "", link: placeLink(roomId, landmark),
+    caption: tr("Scan with your iPhone's camera to open this floor in Whereabouts, started from here."),
+    captionAr: "امسح الرمز بكاميرا الآيفون لتفتح هذا الطابق في Whereabouts، بدءًا من هنا." });
+}
+
+/** Prints a QR code (a page of its own, with the words around it in both languages). */
+async function qrPrint({ title, big, link, caption, captionAr }) {
+  let maker = window.qrcode;
+  if (!maker) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+        s.onload = resolve; s.onerror = reject;
+        document.head.append(s);
+      });
+      maker = window.qrcode;
+    } catch { maker = null; }
+  }
+  if (!maker) { flash(tr("The code couldn't be drawn (it needs the internet once).")); return; }
+  const qr = maker(0, "M");
+  qr.addData(link);
+  qr.make();
+  const svg = qr.createSvgTag({ cellSize: 6, margin: 4, scalable: true });
+  const page = window.open("", "_blank");
+  if (!page) { flash(tr("The browser blocked the print page: allow pop-ups for this site and try again.")); return; }
+  page.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>
+    <style>body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:32px;text-align:center;color:#111}h1{font-size:28px;margin:0 0 6px}.big{font-size:40px;letter-spacing:.14em;font-weight:800;margin:8px 0 16px;font-family:ui-monospace,Menlo,monospace}svg{width:min(70vw,420px);height:auto}p{font-size:18px;max-width:34em;margin:14px auto 0;line-height:1.4}.ar{direction:rtl;font-size:19px}.link{font-size:13px;color:#666;word-break:break-all}.brand{margin-top:22px;font-weight:700;letter-spacing:.02em}@media print{body{padding:12mm}}</style></head>
+    <body><h1>${esc(title)}</h1>${big ? `<div class="big">${esc(big)}</div>` : ""}${svg}<p>${esc(caption)}</p><p class="ar">${esc(captionAr)}</p><p class="link">${esc(link)}</p><div class="brand">Whereabouts</div>
+    <script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+  page.document.close();
 }
 
 // ----- Plan view (SVG, meters) -----
@@ -6534,12 +7194,12 @@ const mapView = {
     const el = document.createElement("button");
     el.type = "button";
     const theirs = !isMine(room);
-    el.className = "map-pin" + (other ? " other" : "") + (theirs ? " theirs" : "");
+    el.className = "map-pin" + (other ? " other" : "") + (theirs ? " theirs" : "") + (isPlace(room) ? " place" : "");
     el.textContent = room.name || tr("Untitled room");
     if (theirs) {
       const owner = document.createElement("span");
       owner.className = "owner";
-      owner.textContent = "· " + (room.owner_email || tr("shared"));
+      owner.textContent = "· " + (isPlace(room) ? placeBadge(room) : room.owner_email || tr("shared"));
       el.append(" ", owner);
     }
     el.setAttribute("aria-label", theirs ? tr("%1$@, %2$@, on the map", room.name || tr("Untitled room"), sharedBy(room)) : tr("%@ on the map", room.name || tr("Untitled room")));
@@ -7003,6 +7663,7 @@ function sharingHTML(room) {
       <span class="help warn">${tr("To make rooms public or share them, the cloud database needs an update: run cloud/supabase-setup.sql again in Supabase's SQL Editor.")}</span></div>`;
   }
   const pub = room.visibility === "public";
+  const floor = isPlace(room);
   const busy = state.unsaved.has("visibility:" + room.id);
   const shares = state.shares?.roomId === room.id ? state.shares : null;
   const list = !shares || shares.list == null ? `<span class="help">${tr("Looking up who it's shared with…")}</span>`
@@ -7014,7 +7675,7 @@ function sharingHTML(room) {
   return `
     <div class="share" id="share">
       <div class="section-title"><label id="share-label">${tr("Who can see it")}</label></div>
-      ${state.publicOff && !pub ? "" : `<div class="seg" role="radiogroup" aria-labelledby="share-label">
+      ${state.publicOff && !pub || floor ? "" : `<div class="seg" role="radiogroup" aria-labelledby="share-label">
         <button type="button" role="radio" id="vis-private" data-visibility="private" aria-checked="${!pub}"${busy ? ' aria-busy="true"' : ""}>${tr("Private")}</button>
         <button type="button" role="radio" id="vis-public" data-visibility="public" aria-checked="${pub}"${busy ? ' aria-busy="true"' : ""}>${tr("Public")}</button>
       </div>`}
@@ -7024,7 +7685,9 @@ function sharingHTML(room) {
         <strong id="public-q">${esc(tr("Make %@ public?", room.name || tr("this room")))}</strong>
         <span class="help">${tr("Everyone with an account in this cloud will see it: where it is on the map, its plan, and every item with its notes and photos. Only you can change it, and you can make it private again at any time.")}</span>
         <div class="row"><button type="button" class="btn primary" id="vis-public-yes">${tr("Make it public")}</button><button type="button" class="btn" id="vis-public-no">${tr("Keep it private")}</button></div>
-      </div>` : `<span class="help" id="share-summary">${pub
+      </div>` : `<span class="help" id="share-summary">${floor
+        ? tr("An event floor or public place: everyone who joins the event, or opens its code, has it on their phone. The people below can also change what's in it. See below to take it back.")
+        : pub
         ? tr("Public: everyone with an account in this cloud can see it, and everything in it. Only you, and the people below you let edit it, can change it.")
         : tr("Private: only you, and the people you share it with below. It goes to their phone too, to find things with. Those you let edit it can change what's in it.")}</span>`}
       <div class="field"><label for="share-email">${pub ? tr("Also shared with") : tr("Share with")}</label>
@@ -7040,6 +7703,13 @@ function sharingHTML(room) {
 function ownerNoteHTML(room) {
   const pub = room.visibility === "public";
   const who = esc(room.owner_email || tr("Another account"));
+  if (isPlace(room)) {
+    const place = placeOf(room), ev = eventOf(room);
+    return `<div class="owner-note" id="owner-note">
+      <span><span class="badge public">${esc(placeBadge(room))}</span></span>
+      <span class="help">${ev ? tr("A floor of %@, mapped by its organizers. You can see everything in it; they change it.", esc(ev.name || ev.code)) : tr("A public place, mapped by its organizers. You can see everything in it; they change it.")}${place?.verified_at ? " " + esc(tr("Last checked %@.", fmtWhen(place.verified_at))) : ""}</span>
+    </div>`;
+  }
   return `<div class="owner-note" id="owner-note">
     <span><span class="badge ${room.can_edit ? "shared" : pub ? "public" : "shared"}">${room.can_edit ? tr("Shared with you to edit") : pub ? tr("Public") : tr("Shared with you")}</span></span>
     <span class="help">${room.can_edit
@@ -7386,6 +8056,13 @@ function wireEvents() {
   $("chat-close").addEventListener("click", chatClose);
   $("plan-button").addEventListener("click", () => { if ($("plan-panel").hidden) planOpen(); else planClose(); });
   $("plan-close").addEventListener("click", planClose);
+  $("events-button").addEventListener("click", () => { if ($("events-panel").hidden) eventsOpen(); else eventsClose(); });
+  $("events-close").addEventListener("click", eventsClose);
+  $("events-body").addEventListener("click", (e) => { eventsClick(e).catch((error) => flash(tr("Couldn't do that: %@", tr(friendlyError(error))))); });
+  $("events-body").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.id === "ev-member") { e.preventDefault(); $("ev-member-add")?.click(); }
+    if (e.key === "Enter" && e.target.id === "org-name") { e.preventDefault(); $("org-create")?.click(); }
+  });
   $("plan-body").addEventListener("click", (e) => {
     if (e.target.closest("#plan-check")) { planCheck(false); return; }
     const pay = e.target.closest("[data-pay]");
@@ -7518,6 +8195,12 @@ function wireEvents() {
     if (e.target.closest("#vis-public-yes")) { saveVisibility("public"); $("vis-public")?.focus(); return; }
     if (e.target.closest("#vis-public-no")) { state.confirmingPublic = false; renderInspector(); $("vis-private")?.focus(); return; }
     if (e.target.closest("#share-add")) { addShare(); return; }
+    if (e.target.closest("#place-publish")) { publishRoom(); return; }
+    if (e.target.closest("#place-unpublish")) { unpublishRoom(); return; }
+    if (e.target.closest("#place-door-qr")) { if (state.room) doorQR(state.room.id, state.room.name, ($("place-landmark")?.value || "").trim()); return; }
+    if (e.target.closest("#listing-add")) { addListing(); return; }
+    const removeListed = e.target.closest("[data-remove-listing]");
+    if (removeListed) { removeListing(removeListed.dataset.removeListing); return; }
     const reportDone = e.target.closest("[data-report-done]");
     if (reportDone) { markReportDone(reportDone.dataset.reportDone); return; }
     const unshare = e.target.closest("[data-unshare]");

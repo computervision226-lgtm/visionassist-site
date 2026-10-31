@@ -137,6 +137,11 @@
     <h2>Money</h2>
     <div class="tiles" id="tiles-money"></div>
 
+    <h2>Events and places</h2>
+    <p class="muted">Organizations, their events and the floors they published; who joined, how often people were told the way, and what the floor scans cost the service (<code>service_settings</code>: <code>places_on</code>, <code>place_scans_per_month</code> and the rest).</p>
+    <div class="tiles" id="tiles-places"></div>
+    <div class="wrap"><table id="events-table"></table></div>
+
     <h2>Claude</h2>
     <p class="muted" id="claude-note"></p>
     <div class="wrap"><table id="claude"></table></div>
@@ -245,7 +250,18 @@
     "plan.organizations": "Write to us (organizations and sponsors) was clicked in the editor.",
     "page.view": "A page of the website was opened (path, referrer's site).", "page.store": "The App Store link was tapped (where).",
     "page.editor": "A link to the editor was clicked on the website (where).", "page.donate": "Donate was clicked on the website (where).",
-    "page.organizations": "Write to us, for an organization or a sponsorship, was clicked on the website (where)."
+    "page.organizations": "Write to us, for an organization or a sponsorship, was clicked on the website (where).",
+    "page.events": "Map your event was clicked on the website (where).",
+    "page.event_open": "Open in Whereabouts was tapped on an event's page (code).", "page.place_open": "Open in Whereabouts was tapped on a place's page (place).",
+    "event.join": "An event was joined in the app (ok, or the error: not_found, ended).",
+    "event.ask": "Something was asked on an event floor (kind: route, find, here, lost...; ok: understood).",
+    "event.route": "The way was described, leg by leg (legs, metres; ok: a way was found; not: why).",
+    "event.arrived": "I'm there, at the end of a described way (listing: whether it was a listed booth).",
+    "event.camera": "Guide me with the camera was tapped on an event floor.", "event.lost": "I'm lost: where they are was asked again.",
+    "place.scan": "A floor was scanned for an event or a place (seconds).", "place.publish": "A floor was published (ok, or the error).",
+    "place.check": "A check on a floor: recognized, confirmed, changed, gone or asked (result).",
+    "place.open_link": "A whereabouts:// link opened an event or a place (kind).",
+    "listing.found": "A listed booth or desk was reached (listing)."
   };
 
   var state = { token: null, refresh: null, overview: null, people: null };
@@ -316,7 +332,8 @@
     $("tiles-money").innerHTML = tile("rooms bought", n(bought), n(m.purchases) + " purchases" + (paid ? ", " + paid : "") + "; " + n(boughtAll) + " ever")
       + tile("Plus subscribers", n(m.plus_active), n(m.plus_paid) + " paying, " + n(m.plus_new) + " new")
       + tile("promo codes used", n(m.promo_redemptions), "in the period")
-      + tile("rooms mapped", n(m.rooms_mapped != null ? m.rooms_mapped : (m.mapping_minutes_used || 0) / 2), n(m.scans) + " scans, " + n(m.mapping_minutes_used) + " min");
+      + tile("rooms mapped", n(m.rooms_mapped != null ? m.rooms_mapped : (m.mapping_minutes_used || 0) / 2), n(m.scans) + " scans, " + n(m.mapping_minutes_used) + " min")
+      + (m.place_scans != null ? tile("floor scans", n(m.place_scans), n(m.place_minutes) + " min, Claude $" + Number(m.place_claude_cost || 0).toFixed(2) + ", the service's") : "");
     var cl = o.claude || [], tot = { calls: 0, cost: 0, tin: 0, tout: 0 };
     cl.forEach(function (c) { tot.calls += c.calls; tot.cost += Number(c.cost); tot.tin += c.input_tokens; tot.tout += c.output_tokens; });
     $("claude-note").textContent = "Estimated at $" + o.claude_rates.in_per_million + " per million tokens read and $" + o.claude_rates.out_per_million + " written (service_settings: claude_in_per_million, claude_out_per_million).";
@@ -330,6 +347,21 @@
       + tile("Claude calls", n(s.claude_calls), "ever")
       + tile("assistant questions", n(s.assistant_chats), s.assistant_trail_days ? "kept " + n(s.assistant_trail_days) + " days" : "not being kept")
       + tile("open reports", n(s.reports_open), n(s.push_phones) + " phones with alerts");
+  }
+
+  function drawPlaces(p) {
+    if (!p) { $("tiles-places").innerHTML = '<p class="muted">Not available in this cloud.</p>'; $("events-table").innerHTML = ""; return; }
+    var ev = p.events || {}, pl = p.places || {}, sc = p.scans || {}, st = p.settings || {}, ch = p.checks || {};
+    $("tiles-places").innerHTML = tile("organizations", n(p.orgs), n(p.members) + " members")
+      + tile("events", n((ev.live || 0) + (ev.draft || 0)), n(ev.live) + " live, " + n(ev.draft) + " draft, " + n(ev.ended) + " ended")
+      + tile("floors published", n(pl.published), n(pl.fresh) + " checked within " + n(st.place_stale_days) + " days, " + n(pl.hidden) + " hidden, " + n(pl.new) + " new")
+      + tile("people who joined", n(p.followers), n(ch.asked) + " told the way, " + n(ch.recognized) + " recognized, " + n((ch.changed || 0) + (ch.gone || 0)) + " problems")
+      + tile("floor scans", n(sc.count), n(sc.minutes) + " min; " + n(sc.this_month) + " of " + n(st.place_scans_per_month) + " this month; Claude $" + Number(p.claude_cost || 0).toFixed(2))
+      + tile(st.places_on ? "places on" : "places off", st.volunteers_on ? "volunteers too" : "members only", n(st.place_seconds) + " s a floor, " + n(st.place_photos) + " photos");
+    var list = p.events_list || [];
+    $("events-table").innerHTML = list.length ? '<tr><th>Event</th><th>Organization</th><th>Status</th><th>Venue</th><th>Starts</th><th class="n">Floors</th><th class="n">Joined</th><th class="n">Told the way</th></tr>'
+      + list.map(function (e) { return '<tr><td><code>' + esc(e.code) + '</code> ' + esc(e.name) + '</td><td>' + esc(e.org || "") + '</td><td>' + esc(e.status) + '</td><td>' + esc(e.venue || "") + '</td><td>' + esc(e.starts_on || "") + '</td><td class="n">' + n(e.floors) + '</td><td class="n">' + n(e.joined) + '</td><td class="n">' + n(e.asked) + '</td></tr>'; }).join("")
+      : '<tr><td class="muted">No events yet.</td></tr>';
   }
 
   function drawDaily(days, span) {
@@ -616,9 +648,10 @@
     var days = Number($("days").value) || 30;
     $("status").textContent = "Loading…";
     $("problem").hidden = true;
-    return Promise.all([rpc("insights_overview", { days: days }), rpc("insights_people", { days: days, most: 300 }), rpc("insights_rooms", { days: days, most: 300 })]).then(function (r) {
+    return Promise.all([rpc("insights_overview", { days: days }), rpc("insights_people", { days: days, most: 300 }), rpc("insights_rooms", { days: days, most: 300 }),
+                        rpc("insights_places", { days: days }).catch(function () { return null; })]).then(function (r) {
       state.overview = r[0]; state.people = r[1];
-      drawOverview(state.overview); drawPeople(state.people); drawRooms(r[2] || []);
+      drawOverview(state.overview); drawPeople(state.people); drawRooms(r[2] || []); drawPlaces(r[3]);
       $("status").textContent = "As of " + when(state.overview.now) + ".";
       return refreshAssistant();
     }).catch(function (e) {

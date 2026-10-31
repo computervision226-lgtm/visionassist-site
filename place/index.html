@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Place – Whereabouts</title>
+<meta name="description" content="A floor or place mapped in Whereabouts: open it on your iPhone, say where you are, and ask the way to anything in it.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="../site.css">
+<style>
+  .when { color: var(--muted); }
+  #open-note { display: none; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="top">
+  <div class="inner">
+    <a class="brand" href="../index.html">Whereabouts</a>
+    <nav class="site" aria-label="Site">
+      <ul>
+        <li><a href="../index.html">Get the app</a></li>
+        <li><a href="../support.html">Support</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section id="place" aria-live="polite">
+    <h1 id="place-name">Loading the place…</h1>
+    <p class="when" id="place-where"></p>
+    <p class="lead" id="place-lead"></p>
+  </section>
+
+  <div class="card">
+    <p><strong>Open it in Whereabouts</strong> on your iPhone, say where you are ("I'm at the entrance"), and ask the way to anything in it. If this floor is part of an event, the app offers to join the whole event.</p>
+    <p><a class="button" id="open-app" href="#">Open in Whereabouts</a> <a class="button secondary" id="get-app" href="https://testflight.apple.com/join/CGgqV2Q6">Get the app (TestFlight)</a></p>
+    <p id="open-note">If nothing opened, the app isn't installed yet: get it with the second button, then scan the code or open this link again.</p>
+  </div>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li>Directions describe the place as it was scanned, with the owner's permission. Things move: when something isn't where you were told, say <strong>that's not there</strong> in the app and whoever mapped it hears about it.</li>
+    <li>Directions don't see people or things moved into the way; use them with your cane or guide dog, as you would any directions.</li>
+    <li>Something wrong with this page or this place? <a id="report" href="mailto:computervision226@gmail.com?subject=A%20place%20in%20Whereabouts">Write to us</a>.</li>
+  </ul>
+</main>
+
+<footer class="bottom">
+  <div class="inner">
+    Whereabouts · <a href="../support.html">Support</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="mailto:computervision226@gmail.com">computervision226@gmail.com</a>
+  </div>
+</footer>
+<script>
+// The place named in the link (#uuid, with an optional .landmark after it),
+// from the cloud: its name, where it is, when it was last checked. Nothing
+// about anyone.
+(function () {
+  var SERVICE = window.VISIONASSIST_SERVICE || { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
+  var hash = (location.hash || "").replace(/^#/, "");
+  var id = (hash.split(".")[0] || "").toLowerCase();
+  var landmark = decodeURIComponent(hash.split(".").slice(1).join(".") || "").replace(/[-_+]/g, " ").trim().slice(0, 80);
+  var isId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
+  var $ = function (i) { return document.getElementById(i); };
+  function text(i, value) { $(i).textContent = value; }
+  function show(card) {
+    if (!card) {
+      text("place-name", "This place isn't published");
+      text("place-lead", "The code or link may be old, or the place was taken down. Ask whoever put it up.");
+      return;
+    }
+    document.title = card.name + " – Whereabouts";
+    text("place-name", card.name);
+    var bits = [];
+    if (card.floor) bits.push("Floor " + card.floor);
+    if (card.address) bits.push(card.address);
+    if (card.verified_at) bits.push("last checked " + new Date(card.verified_at).toLocaleDateString());
+    text("place-where", bits.join(" · "));
+    text("place-lead", (card.org ? "Mapped by " + card.org + ". " : "") + (landmark ? "This code is by the " + landmark + ": the app starts you from there." : "Open it in the app and say where you are to be told the way."));
+    $("report").href = "mailto:computervision226@gmail.com?subject=" + encodeURIComponent("A place in Whereabouts: " + card.name);
+  }
+  var openLink = $("open-app");
+  openLink.href = "whereabouts://place/" + id + (landmark ? "#" + encodeURIComponent(landmark) : "");
+  openLink.addEventListener("click", function () {
+    send("page.place_open", { place: id });
+    setTimeout(function () { $("open-note").style.display = "block"; }, 1500);
+  });
+  if (!isId) { show(null); }
+  else {
+    fetch(SERVICE.url + "/rest/v1/rpc/place_card", { method: "POST",
+      headers: { apikey: SERVICE.key, "content-type": "application/json" }, body: JSON.stringify({ id: id }) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(show)
+      .catch(function () { show(null); });
+  }
+
+  // A page view for the site's Insights, as on every page.
+  function install() {
+    try {
+      var k = localStorage.getItem("va.install");
+      if (!k) { k = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, ""); localStorage.setItem("va.install", k); }
+      return k;
+    } catch (e) { return "unknown"; }
+  }
+  var session = Math.random().toString(36).slice(2);
+  function send(name, props) {
+    var event = { surface: "site", name: name, at: new Date().toISOString(), props: props || {}, install: install(), session: session, language: (navigator.language || "").slice(0, 16) };
+    try {
+      fetch(SERVICE.url + "/rest/v1/rpc/record_events", { method: "POST", keepalive: true,
+        headers: { apikey: SERVICE.key, "content-type": "application/json" }, body: JSON.stringify({ batch: [event] }) }).catch(function () {});
+    } catch (e) {}
+  }
+  var from = "";
+  try { from = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) {}
+  if (from === location.hostname) from = "";
+  send("page.view", { path: location.pathname, from: from, place: isId ? id : "" });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (/apps\.apple\.com|testflight\.apple\.com/.test(href)) send("page.store", { where: location.pathname });
+  });
+})();
+</script>
+</body>
+</html>
