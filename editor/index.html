@@ -566,7 +566,7 @@ button { cursor: pointer; }
       <span class="brand-name">Whereabouts Editor</span>
     </div>
     <div>
-      <h1>Rooms from your iPhone, Spaces for your events: see them, fix them, share them.</h1>
+      <h1>Rooms from your iPhone, venues for your events: see them, fix them, share them.</h1>
       <p>Sign in with the same account as the app (Settings, Cloud).</p>
     </div>
     <div class="field">
@@ -620,7 +620,7 @@ button { cursor: pointer; }
     </button>
     <span class="status" id="status" data-state="ok" aria-live="polite"><span class="dot"></span><span id="status-text">Connected</span></span>
     <button class="btn ghost" type="button" id="plan-button" aria-pressed="false" hidden>Rooms and Plus</button>
-    <button class="btn ghost" type="button" id="events-button" aria-pressed="false" hidden>Spaces</button>
+    <button class="btn ghost" type="button" id="events-button" aria-pressed="false" hidden>Venues</button>
     <span class="account" id="account"></span>
     <button class="btn ghost" type="button" id="sign-out">Sign out</button>
   </header>
@@ -712,7 +712,7 @@ button { cursor: pointer; }
 
   <section class="chat plan-panel" id="events-panel" hidden role="dialog" aria-labelledby="events-title">
     <header class="chat-head">
-      <strong id="events-title">Spaces</strong>
+      <strong id="events-title">Venues</strong>
       <button class="tool" type="button" id="events-close" aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
     </header>
     <div class="plan-body" id="events-body"></div>
@@ -729,7 +729,7 @@ button { cursor: pointer; }
 <script type="module">
 // ---------------------------------------------------------------------------
 // Whereabouts Editor: the desktop side of Whereabouts.
-// Reads the rooms (and the floors mapped for events: Spaces) that the iPhone
+// Reads the rooms (and the floors mapped for events: Venues) that the iPhone
 // uploads to Supabase, draws each as a floor plan (or in 3D), and saves label
 // edits back. The phone picks them up on its next sync. Works from a file on
 // your computer; nothing to install.
@@ -2449,7 +2449,7 @@ function renderRoomList() {
 function renderSideHead() {
   const head = $("side-head");
   if (!state.room) {
-    head.innerHTML = `<div class="eyebrow">${state.rooms.some(isPlace) ? tr("Rooms and Spaces") : state.rooms.some((r) => !isMine(r)) || (state.attention || []).length ? tr("Rooms") : tr("Your rooms")}</div>`;
+    head.innerHTML = `<div class="eyebrow">${state.rooms.some(isPlace) ? tr("Rooms and venues") : state.rooms.some((r) => !isMine(r)) || (state.attention || []).length ? tr("Rooms") : tr("Your rooms")}</div>`;
     return;
   }
   const counts = { all: state.items.length, furniture: state.items.filter(isFurniture).length,
@@ -2482,9 +2482,9 @@ function renderList() {
     const places = state.rooms.filter((r) => isPlace(r) && !isMine(r));
     const mine = state.rooms.filter(isMine), theirs = state.rooms.filter((r) => !isMine(r) && !isPlace(r));
     const reports = state.attention || [];
-    // Spaces (the floors of events you've joined) first, then your rooms and the ones shared with you.
+    // Venues (the floors of events you've joined) first, then your rooms and the ones shared with you.
     list.innerHTML = (reports.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Needs attention")}</div><div class="attention">${attentionHTML(reports, true)}</div>` : "")
-      + (places.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Spaces")}</div>${places.map(card).join("")}` : "")
+      + (places.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Venues")}</div>${places.map(card).join("")}` : "")
       + ((theirs.length || places.length) && mine.length || reports.length ? `<div class="list-heading" role="heading" aria-level="3">${theirs.length || places.length ? tr("Yours") : tr("Your rooms")}</div>` : "")
       + (mine.length ? mine.map(card).join("") : `<div class="list-empty">${tr("No rooms of your own yet. Scan a room with the iPhone app while signed in, and it appears here.")}</div>`)
       + (theirs.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Shared with you")}</div>${theirs.map(card).join("")}` : "");
@@ -3078,8 +3078,8 @@ function renderPlan() {
       <button type="button" class="btn" id="plan-check"${plan.checking ? " disabled" : ""}>${plan.checking ? tr("Checking your account…") : tr("Paid already? Check again")}</button>
     </section>` : ""}
     ${mail ? `<section>
-      <h3>${tr("Spaces for events, venues and organizations")}</h3>
-      <p class="help">${tr("Spaces for a conference or a venue (your people map its floors; everyone who comes asks their way around), Whereabouts for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
+      <h3>${tr("Events, venues and organizations")}</h3>
+      <p class="help">${tr("Whereabouts for a conference or a venue (your people map its floors; everyone who comes asks their way around), for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
       <p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${subject}" data-write dir="ltr">${esc(mail)}</a></p>
     </section>` : ""}
     ${PRICES.donate ? `<section>
@@ -3203,19 +3203,19 @@ async function loadPlaces(rooms) {
   events.known = true;    // (the button waits for this: what the panel shows depends on it)
 }
 
-/** The Spaces button: for every signed-in account once this cloud publishes floors
- *  (members and admins run their events in it; everyone else sees what Spaces are and where to write). */
+/** The Venues button: for every signed-in account once this cloud publishes floors
+ *  (members and admins run their events in it; everyone else sees what venues are and where to write). */
 function showEventsButton() {
   const show = eventsAvailable() && events.known;
   $("events-button").hidden = !show;
   if (!show) eventsClose();
 }
 
-/** "Event floor · AT Conference 2027" or "Public space", for a card or a pin. */
+/** "Event floor · AT Conference 2027" or "Public venue", for a card or a pin. */
 function placeBadge(room) {
   const ev = eventOf(room);
   if (ev) return `${tr("Event floor")} · ${ev.name || ev.code}`;
-  return tr("Public space");
+  return tr("Public venue");
 }
 
 /** An organization's events, for the publish form and the panel (loaded once, refreshed on changes). */
@@ -3245,7 +3245,7 @@ function placeSectionHTML(room) {
   if (isPlace(room)) {
     const hidden = place && place.status !== "published";
     return `<div class="field" id="place-section">
-      <div class="section-title"><label>${ev ? tr("Event floor") : tr("Public space")}</label></div>
+      <div class="section-title"><label>${ev ? tr("Event floor") : tr("Public venue")}</label></div>
       <span class="help">${hidden ? tr("Hidden: it was taken down, and isn't on anyone's phone. Publish it again from its event, or write to us.")
         : ev ? tr("Published in %@: everyone who joins it with the code %@ gets this floor on their phone, with its plan, its things and its photos, and can ask the way around it.", esc(ev.name || ""), `<span class="ev-code" dir="ltr">${esc(ev.code || "")}</span>`)
         : tr("Published as a public place: anyone with the app who opens its code gets it on their phone, with its plan, its things and its photos.")}</span>
@@ -3523,7 +3523,7 @@ function renderEvents() {
   }
   if (!orgs.length && !events.isAdmin) {
     const mail = String(PRICES.organizations || "").trim();
-    parts.push(`<section><h3>${tr("Spaces: for conferences and venues")}</h3>
+    parts.push(`<section><h3>${tr("Venues: for conferences and events")}</h3>
       <p class="help">${tr("An organization's members map a venue's floors with the iPhone and publish them into an event; everyone who joins with its code asks their way around, in words, with no camera. To set up an organization, write to us.")}</p>
       ${mail ? `<p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${encodeURIComponent("Whereabouts for an event")}" dir="ltr" data-write-events>${esc(mail)}</a></p>` : ""}</section>`);
   }
@@ -3531,7 +3531,7 @@ function renderEvents() {
     ${mine.length ? `<ul class="ev-list">${mine.map((e) => `<li><div class="ev-row"><strong>${esc(e.name)}</strong><span class="ev-code" dir="ltr">${esc(e.code)}</span></div>
         <span class="help">${esc([e.venue, e.city].filter(Boolean).join(", "))}${e.places != null ? (e.venue || e.city ? " · " : "") + esc(countOf(Number(e.places) || 0, "floor")) : ""}</span>
         <div class="ev-row"><button type="button" class="btn ghost" data-leave-event="${esc(e.code)}">${tr("Leave the event")}</button></div></li>`).join("")}</ul>`
-      : `<p class="help">${tr("None yet. Join an event in the app with its six-letter code (Spaces, then Join an event); its floors then show here too, to look at.")}</p>`}</section>`);
+      : `<p class="help">${tr("None yet. Join an event in the app with its six-letter code (Venues, then Join an event); its floors then show here too, to look at.")}</p>`}</section>`);
   body.innerHTML = parts.join("");
 }
 
@@ -3611,7 +3611,7 @@ async function eventsClick(e) {
   if (evQR) {
     usage.log("event.qr");
     qrPrint({ title: evQR.dataset.name, big: evQR.dataset.code, link: eventLink(evQR.dataset.code),
-      caption: tr("Scan with your iPhone's camera, or open the Whereabouts app, tap Spaces, then Join an event, and type the code.") });
+      caption: tr("Scan with your iPhone's camera, or open the Whereabouts app, tap Venues, then Join an event, and type the code.") });
     return;
   }
   const door = t.closest("[data-door-qr]");
