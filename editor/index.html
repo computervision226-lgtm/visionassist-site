@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Whereabouts Rooms</title>
+<title>Whereabouts Editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Barlow+Semi+Condensed:wght@600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
 <style>
 /* Layout: a drafting table in three panes - rooms and items on the left, the
    plan (or 3D view) as the sheet in the middle, the selected item on the right.
@@ -33,9 +33,9 @@
   --ok: #1d7a4b;
   --warn: #9a6200;
   --shadow: 0 1px 2px rgba(22, 33, 44, 0.08), 0 8px 24px rgba(22, 33, 44, 0.08);
-  --font-ui: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Noto Sans Arabic", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-data: "Atkinson Hyperlegible Mono", "Noto Sans Arabic", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-title: "Barlow Semi Condensed", "Noto Sans Arabic", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-ui: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-data: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-title: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
   --radius: 10px;
   color-scheme: light;
 }
@@ -312,7 +312,6 @@ button { cursor: pointer; }
   padding: 5px 11px; font-size: 13px; color: var(--ink-2); text-align: center; text-wrap: balance;
 }
 .edit-hint:empty { display: none; }
-:root[dir="rtl"] #edit-undo svg, :root[dir="rtl"] #edit-redo svg { transform: scaleX(-1); }
 .stage.editing .plan-storeys { top: 66px; }
 .stage.editing .plan-furniture, .stage.editing .plan-item, .stage.editing .plan-container, .stage.editing .plan-label-group, .stage.editing .plan-hit { cursor: move; }
 #plan.tool-wall, #plan.tool-wall *, #plan.tool-furniture, #plan.tool-furniture * { cursor: crosshair; }
@@ -532,17 +531,6 @@ button { cursor: pointer; }
 .map-visibility:disabled { cursor: default; opacity: 1; }
 .map-visibility.theirs { border-style: dashed; border-color: var(--blue); }
 
-/* ---------- Arabic, right to left ---------- */
-/* The plan, the 3D view and the map keep their own left and right (the 3D
-   labels and the map's pins are placed from the left), as do the arrows that
-   move the room on the map. Arabic letters join, so they aren't spaced apart. */
-#plan, #three, #geo, .where-move { direction: ltr; }
-:root[lang="ar"] .eyebrow, :root[lang="ar"] .list-heading, :root[lang="ar"] .brand-name, :root[lang="ar"] .room-title { letter-spacing: 0; }
-/* Figures with Arabic words in them ("م", "فوق الأرضية") need a font that
-   joins the letters, which a monospaced fallback may not. */
-:root[lang="ar"] { --font-data: var(--font-ui); }
-.plan-room-name.cursive { letter-spacing: 0; }
-
 /* ---------- Narrow screens ---------- */
 .hosted-wait { margin: 3rem 1.2rem; text-align: center; color: var(--muted, #666); }
 @media (max-width: 1100px) {
@@ -570,39 +558,38 @@ button { cursor: pointer; }
 </head>
 <body>
 
-<p id="hosted-wait" class="hosted-wait" hidden data-i18n="Connecting to your account…">Connecting to your account…</p>
+<p id="hosted-wait" class="hosted-wait" hidden>Connecting to your account…</p>
 <section id="signin" hidden>
   <form class="signin-card" id="signin-form" novalidate>
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="5.5"/><path d="M10 1v4M10 15v4M1 10h4M15 10h4"/></svg></span>
-      <span class="brand-name" data-i18n="Whereabouts Rooms">Whereabouts Rooms</span>
+      <span class="brand-name">Whereabouts Editor</span>
     </div>
     <div>
-      <h1 data-i18n="See and edit the rooms your iPhone scanned">See and edit the rooms your iPhone scanned</h1>
-      <p data-i18n="Sign in with the same account as the app (Settings, Cloud).">Sign in with the same account as the app (Settings, Cloud).</p>
+      <h1>Rooms from your iPhone, Spaces for your events: see them, fix them, share them.</h1>
+      <p>Sign in with the same account as the app (Settings, Cloud).</p>
     </div>
     <div class="field">
-      <label for="cfg-url" data-i18n="Supabase project URL">Supabase project URL</label>
+      <label for="cfg-url">Supabase project URL</label>
       <input id="cfg-url" name="url" type="url" dir="ltr" placeholder="https://abcdefgh.supabase.co" autocomplete="off" spellcheck="false">
     </div>
     <div class="field">
-      <label for="cfg-key" data-i18n="Publishable key">Publishable key</label>
-      <input id="cfg-key" name="key" type="text" dir="ltr" placeholder="sb_publishable_… or the anon key" data-i18n-placeholder="sb_publishable_… or the anon key" autocomplete="off" spellcheck="false">
-      <span class="hint" data-i18n="Both are in Supabase under Project Settings, API Keys. They're remembered in this browser.">Both are in Supabase under Project Settings, API Keys. They're remembered in this browser.</span>
+      <label for="cfg-key">Publishable key</label>
+      <input id="cfg-key" name="key" type="text" dir="ltr" placeholder="sb_publishable_… or the anon key" autocomplete="off" spellcheck="false">
+      <span class="hint">Both are in Supabase under Project Settings, API Keys. They're remembered in this browser.</span>
     </div>
     <div class="field">
-      <label for="cfg-email" data-i18n="Email">Email</label>
+      <label for="cfg-email">Email</label>
       <input id="cfg-email" name="email" type="email" dir="ltr" autocomplete="username">
     </div>
     <div class="field">
-      <label for="cfg-password" data-i18n="Password">Password</label>
+      <label for="cfg-password">Password</label>
       <input id="cfg-password" name="password" type="password" dir="ltr" autocomplete="current-password">
     </div>
     <div class="notice error" id="signin-error" role="alert" hidden></div>
-    <button class="btn primary" type="submit" id="signin-button" data-i18n="Sign in">Sign in</button>
-    <div class="divider" data-i18n="or">or</div>
-    <button class="btn" type="button" id="demo-button" data-i18n="Explore a sample room">Explore a sample room</button>
-    <button class="btn ghost lang-switch" type="button" data-lang-switch lang="ar">العربية</button>
+    <button class="btn primary" type="submit" id="signin-button">Sign in</button>
+    <div class="divider">or</div>
+    <button class="btn" type="button" id="demo-button">Explore a sample room</button>
   </form>
 </section>
 
@@ -610,124 +597,123 @@ button { cursor: pointer; }
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="5.5"/><path d="M10 1v4M10 15v4M1 10h4M15 10h4"/></svg></span>
-      <span class="brand-name" data-i18n="Rooms">Rooms</span>
+      <span class="brand-name">Editor</span>
     </div>
-    <input class="room-title" id="room-title" dir="auto" aria-label="Room name" data-i18n-aria-label="Room name" hidden>
+    <input class="room-title" id="room-title" dir="auto" aria-label="Room name" hidden>
     <div class="spacer"></div>
-    <div class="segmented" role="group" aria-label="View" data-i18n-aria-label="View" id="view-toggle" hidden>
-      <button type="button" id="view-plan" aria-pressed="true" data-i18n="Plan">Plan</button>
+    <div class="segmented" role="group" aria-label="View" id="view-toggle" hidden>
+      <button type="button" id="view-plan" aria-pressed="true">Plan</button>
       <button type="button" id="view-3d" aria-pressed="false">3D</button>
-      <button type="button" id="view-map" aria-pressed="false" data-i18n="Map">Map</button>
+      <button type="button" id="view-map" aria-pressed="false">Map</button>
     </div>
     <button class="btn" type="button" id="add-item" hidden>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 2v12M2 8h12"/></svg>
-      <span data-i18n="Add item">Add item</span>
+      <span>Add item</span>
     </button>
     <button class="btn" type="button" id="edit-plan" aria-pressed="false" hidden>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5l.8-3.2 7.9-7.9 2.4 2.4-7.9 7.9zM9.8 3.8l2.4 2.4"/></svg>
-      <span data-i18n="Edit plan">Edit plan</span>
+      <span>Edit plan</span>
     </button>
     <button class="btn" type="button" id="ask-room" aria-pressed="false" hidden>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>
-      <span data-i18n="Ask">Ask</span>
+      <span>Ask</span>
     </button>
-    <span class="status" id="status" data-state="ok" aria-live="polite"><span class="dot"></span><span id="status-text" data-i18n="Connected">Connected</span></span>
-    <button class="btn ghost" type="button" id="plan-button" aria-pressed="false" hidden data-i18n="Rooms and Plus">Rooms and Plus</button>
-    <button class="btn ghost" type="button" id="events-button" aria-pressed="false" hidden data-i18n="Events">Events</button>
+    <span class="status" id="status" data-state="ok" aria-live="polite"><span class="dot"></span><span id="status-text">Connected</span></span>
+    <button class="btn ghost" type="button" id="plan-button" aria-pressed="false" hidden>Rooms and Plus</button>
+    <button class="btn ghost" type="button" id="events-button" aria-pressed="false" hidden>Spaces</button>
     <span class="account" id="account"></span>
-    <button class="btn ghost lang-switch" type="button" data-lang-switch lang="ar">العربية</button>
     <button class="btn ghost" type="button" id="sign-out">Sign out</button>
   </header>
 
-  <aside class="sidebar" aria-label="Rooms and items" data-i18n-aria-label="Rooms and items">
+  <aside class="sidebar" aria-label="Rooms and items">
     <div class="side-head" id="side-head"></div>
-    <div class="list" id="list" role="listbox" aria-label="Items" data-i18n-aria-label="Items"></div>
+    <div class="list" id="list" role="listbox" aria-label="Items"></div>
   </aside>
 
   <main class="stage" id="stage">
-    <svg id="plan" aria-label="Floor plan" data-i18n-aria-label="Floor plan"></svg>
+    <svg id="plan" aria-label="Floor plan"></svg>
     <div id="three" hidden></div>
-    <div id="geo" hidden aria-label="Map of where the room is" data-i18n-aria-label="Map of where the room is"></div>
-    <div class="map-levels" id="map-levels" role="group" aria-label="How close to look" data-i18n-aria-label="How close to look" hidden>
-      <button type="button" data-level="world" aria-pressed="false" data-i18n="World">World</button>
-      <button type="button" data-level="building" aria-pressed="false" data-i18n="Building">Building</button>
-      <button type="button" data-level="apartment" aria-pressed="false" data-i18n="Apartment">Apartment</button>
-      <button type="button" data-level="room" data-i18n="Room">Room</button>
+    <div id="geo" hidden aria-label="Map of where the room is"></div>
+    <div class="map-levels" id="map-levels" role="group" aria-label="How close to look" hidden>
+      <button type="button" data-level="world" aria-pressed="false">World</button>
+      <button type="button" data-level="building" aria-pressed="false">Building</button>
+      <button type="button" data-level="apartment" aria-pressed="false">Apartment</button>
+      <button type="button" data-level="room">Room</button>
     </div>
     <button type="button" class="map-visibility" id="map-visibility" hidden></button>
     <div class="map-caption" id="map-caption" role="status" hidden></div>
     <div class="map-tools" id="map-tools" hidden>
-      <button class="tool" type="button" id="map-locate" aria-label="Go to where this computer is" title="Go to where this computer is" data-i18n-aria-label="Go to where this computer is" data-i18n-title="Go to where this computer is"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg></button>
+      <button class="tool" type="button" id="map-locate" aria-label="Go to where this computer is" title="Go to where this computer is"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg></button>
     </div>
-    <div class="stage-banner" id="map-banner" hidden><span id="map-banner-text">Click your building on the map</span> <button type="button" id="map-banner-cancel" data-i18n="Cancel">Cancel</button></div>
+    <div class="stage-banner" id="map-banner" hidden><span id="map-banner-text">Click your building on the map</span> <button type="button" id="map-banner-cancel">Cancel</button></div>
     <div class="stage-empty" id="stage-empty" hidden></div>
-    <div class="stage-banner" id="add-banner" hidden><span id="add-banner-text">Click the plan where the new item is</span> <button type="button" id="add-cancel" data-i18n="Cancel">Cancel</button></div>
+    <div class="stage-banner" id="add-banner" hidden><span id="add-banner-text">Click the plan where the new item is</span> <button type="button" id="add-cancel">Cancel</button></div>
     <div class="edit-top" id="edit-top" hidden>
-    <div class="edit-bar" id="edit-bar" role="toolbar" aria-label="Editing the plan" data-i18n-aria-label="Editing the plan">
-      <button type="button" data-tool="select" aria-pressed="true" title="Pick and drag (Esc)" data-i18n-title="Pick and drag (Esc)">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 2l9 5.2-4 .9 2.6 4.6-1.7 1-2.6-4.6L3.6 12z"/></svg><span data-i18n="Pick">Pick</span></button>
-      <button type="button" data-tool="wall" aria-pressed="false" title="Draw a wall" data-i18n-title="Draw a wall">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M2 13.5L14 2.5"/></svg><span data-i18n="Wall">Wall</span></button>
-      <button type="button" data-tool="door" aria-pressed="false" title="Put a door in a wall" data-i18n-title="Put a door in a wall">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M1 14h3M12 14h3M4 14V3M4 3a10 10 0 0 1 8 11" stroke-dasharray="0"/></svg><span data-i18n="Door">Door</span></button>
-      <button type="button" data-tool="opening" aria-pressed="false" title="Put a doorway with no door in a wall" data-i18n-title="Put a doorway with no door in a wall">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M1 8h4M11 8h4"/><path d="M5 5v6M11 5v6" stroke-width="1.4"/></svg><span data-i18n="Doorway">Doorway</span></button>
-      <button type="button" data-tool="window" aria-pressed="false" title="Put a window in a wall" data-i18n-title="Put a window in a wall">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="6" width="12" height="4"/><path d="M2 8h12"/></svg><span data-i18n="Window">Window</span></button>
-      <button type="button" data-tool="furniture" aria-pressed="false" title="Draw a piece of furniture" data-i18n-title="Draw a piece of furniture">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="4" width="12" height="8" rx="1"/></svg><span data-i18n="Furniture">Furniture</span></button>
+    <div class="edit-bar" id="edit-bar" role="toolbar" aria-label="Editing the plan">
+      <button type="button" data-tool="select" aria-pressed="true" title="Pick and drag (Esc)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 2l9 5.2-4 .9 2.6 4.6-1.7 1-2.6-4.6L3.6 12z"/></svg><span>Pick</span></button>
+      <button type="button" data-tool="wall" aria-pressed="false" title="Draw a wall">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M2 13.5L14 2.5"/></svg><span>Wall</span></button>
+      <button type="button" data-tool="door" aria-pressed="false" title="Put a door in a wall">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M1 14h3M12 14h3M4 14V3M4 3a10 10 0 0 1 8 11" stroke-dasharray="0"/></svg><span>Door</span></button>
+      <button type="button" data-tool="opening" aria-pressed="false" title="Put a doorway with no door in a wall">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M1 8h4M11 8h4"/><path d="M5 5v6M11 5v6" stroke-width="1.4"/></svg><span>Doorway</span></button>
+      <button type="button" data-tool="window" aria-pressed="false" title="Put a window in a wall">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="6" width="12" height="4"/><path d="M2 8h12"/></svg><span>Window</span></button>
+      <button type="button" data-tool="furniture" aria-pressed="false" title="Draw a piece of furniture">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="4" width="12" height="8" rx="1"/></svg><span>Furniture</span></button>
       <span class="sep" aria-hidden="true"></span>
-      <button type="button" id="edit-undo" disabled aria-label="Undo" title="Undo (Ctrl+Z)" data-i18n-aria-label="Undo" data-i18n-title="Undo (Ctrl+Z)">
+      <button type="button" id="edit-undo" disabled aria-label="Undo" title="Undo (Ctrl+Z)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3L2 6l3 3"/><path d="M2 6h7.5a4 4 0 0 1 0 8H6"/></svg></button>
-      <button type="button" id="edit-redo" disabled aria-label="Redo" title="Redo (Ctrl+Shift+Z)" data-i18n-aria-label="Redo" data-i18n-title="Redo (Ctrl+Shift+Z)">
+      <button type="button" id="edit-redo" disabled aria-label="Redo" title="Redo (Ctrl+Shift+Z)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3l3 3-3 3"/><path d="M14 6H6.5a4 4 0 0 0 0 8H10"/></svg></button>
-      <button type="button" id="edit-done" class="done" data-i18n="Done">Done</button>
+      <button type="button" id="edit-done" class="done">Done</button>
     </div>
     <div class="edit-hint" id="edit-hint" role="status"></div>
     </div>
     <div class="stage-flash" id="flash" role="status" hidden></div>
     <div class="legend" id="legend" hidden>
-      <span class="key"><span class="swatch" style="background: var(--furniture); border: 1px solid var(--furniture-line)"></span><span data-i18n="Furniture">Furniture</span></span>
-      <span class="key"><span class="swatch" style="background: var(--blue); border-radius: 50%"></span><span data-i18n="Item">Item</span></span>
-      <span class="key"><span class="swatch" style="background: var(--warn); border-radius: 50%"></span><span data-i18n="Not sure of the name">Not sure of the name</span></span>
-      <span class="key" id="legend-inside" hidden><span class="swatch" style="background: var(--furniture); border: 1px dashed var(--furniture-line)"></span><span data-i18n="Looked inside">Looked inside</span></span>
+      <span class="key"><span class="swatch" style="background: var(--furniture); border: 1px solid var(--furniture-line)"></span><span>Furniture</span></span>
+      <span class="key"><span class="swatch" style="background: var(--blue); border-radius: 50%"></span><span>Item</span></span>
+      <span class="key"><span class="swatch" style="background: var(--warn); border-radius: 50%"></span><span>Not sure of the name</span></span>
+      <span class="key" id="legend-inside" hidden><span class="swatch" style="background: var(--furniture); border: 1px dashed var(--furniture-line)"></span><span>Looked inside</span></span>
     </div>
-    <div class="plan-storeys" id="plan-storeys" role="group" aria-label="Storey" data-i18n-aria-label="Storey" hidden></div>
+    <div class="plan-storeys" id="plan-storeys" role="group" aria-label="Storey" hidden></div>
     <div class="stage-tools" id="stage-tools" hidden>
-      <button class="tool" type="button" id="zoom-in" aria-label="Zoom in" data-i18n-aria-label="Zoom in"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg></button>
-      <button class="tool" type="button" id="zoom-out" aria-label="Zoom out" data-i18n-aria-label="Zoom out"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10"/></svg></button>
-      <button class="tool" type="button" id="zoom-fit" aria-label="Fit the room" data-i18n-aria-label="Fit the room"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
+      <button class="tool" type="button" id="zoom-in" aria-label="Zoom in"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg></button>
+      <button class="tool" type="button" id="zoom-out" aria-label="Zoom out"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10"/></svg></button>
+      <button class="tool" type="button" id="zoom-fit" aria-label="Fit the room"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
     </div>
   </main>
 
-  <aside class="inspector empty" id="inspector" aria-label="Selected item" data-i18n-aria-label="Selected item"></aside>
+  <aside class="inspector empty" id="inspector" aria-label="Selected item"></aside>
 
-  <section class="chat" id="chat" hidden role="dialog" aria-label="Ask about this room" data-i18n-aria-label="Ask about this room">
+  <section class="chat" id="chat" hidden role="dialog" aria-label="Ask about this room">
     <header class="chat-head">
-      <strong data-i18n="Ask about this room">Ask about this room</strong>
-      <button class="btn ghost" type="button" id="chat-clear" data-i18n="Start again">Start again</button>
-      <button class="tool" type="button" id="chat-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+      <strong>Ask about this room</strong>
+      <button class="btn ghost" type="button" id="chat-clear">Start again</button>
+      <button class="tool" type="button" id="chat-close" aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
     </header>
     <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
     <div class="chat-ideas" id="chat-ideas"></div>
     <form class="chat-form" id="chat-form">
-      <textarea id="chat-input" rows="2" dir="auto" placeholder="Where are the keys?" data-i18n-placeholder="Where are the keys?" aria-label="Your question" data-i18n-aria-label="Your question"></textarea>
-      <button class="btn primary" type="submit" id="chat-send" data-i18n="Send">Send</button>
+      <textarea id="chat-input" rows="2" dir="auto" placeholder="Where are the keys?" aria-label="Your question"></textarea>
+      <button class="btn primary" type="submit" id="chat-send">Send</button>
     </form>
   </section>
 
   <section class="chat plan-panel" id="plan-panel" hidden role="dialog" aria-labelledby="plan-title">
     <header class="chat-head">
-      <strong id="plan-title" data-i18n="Rooms and Plus">Rooms and Plus</strong>
-      <button class="tool" type="button" id="plan-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+      <strong id="plan-title">Rooms and Plus</strong>
+      <button class="tool" type="button" id="plan-close" aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
     </header>
     <div class="plan-body" id="plan-body"></div>
   </section>
 
   <section class="chat plan-panel" id="events-panel" hidden role="dialog" aria-labelledby="events-title">
     <header class="chat-head">
-      <strong id="events-title" data-i18n="Events">Events</strong>
-      <button class="tool" type="button" id="events-close" aria-label="Close" data-i18n-aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+      <strong id="events-title">Spaces</strong>
+      <button class="tool" type="button" id="events-close" aria-label="Close"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
     </header>
     <div class="plan-body" id="events-body"></div>
   </section>
@@ -742,10 +728,11 @@ button { cursor: pointer; }
 </script>
 <script type="module">
 // ---------------------------------------------------------------------------
-// VisionAssist Rooms: the desktop side of VisionAssist.
-// Reads the rooms and items the iPhone uploads to Supabase, draws each room as
-// a floor plan (or in 3D), and saves label edits back. The phone picks them up
-// on its next sync. Works from a file on your computer; nothing to install.
+// Whereabouts Editor: the desktop side of Whereabouts.
+// Reads the rooms (and the floors mapped for events: Spaces) that the iPhone
+// uploads to Supabase, draws each as a floor plan (or in 3D), and saves label
+// edits back. The phone picks them up on its next sync. Works from a file on
+// your computer; nothing to install.
 // ---------------------------------------------------------------------------
 
 const CATEGORIES = ["furniture", "appliance", "electronics", "kitchenware", "decor", "lighting", "storage",
@@ -764,7 +751,7 @@ const CATEGORY_NAMES = { furniture: N_("Furniture"), appliance: N_("Appliance"),
   food: N_("Food"), medicine: N_("Medicine"), other: N_("Other") };
 const LOW_CONFIDENCE = 0.6;
 const STORAGE_KEYS = { url: "va.supabase.url", key: "va.supabase.key", email: "va.email", view: "va.view" };
-// Your VisionAssist service (README, "Run it for everyone"): its project URL and
+// Your Whereabouts service (README, "Run it for everyone"): its project URL and
 // publishable key, as in the app's Service.swift. Filled in, signing in asks
 // only for the email and password.
 const SERVICE = { url: "https://sdamqekmvppcickisvrd.supabase.co", key: "sb_publishable_nskx50aX7tO7b9X7_3yXJQ_hnVZctvo" };
@@ -816,7 +803,7 @@ const usage = {
   save() { store.set("va.usage", JSON.stringify(this.queue)); },
   log(name, ok, props) {
     if (!/^[a-z][a-z0-9_.]{1,60}$/.test(name)) return;
-    const event = { surface: "editor", name, at: new Date().toISOString(), props: props || {}, install: this.install(), session: this.session, language: LANG };
+    const event = { surface: "editor", name, at: new Date().toISOString(), props: props || {}, install: this.install(), session: this.session, language: "en" };
     if (typeof ok === "boolean") event.ok = ok;
     this.queue.push(event);
     if (this.queue.length > 300) this.queue.splice(0, this.queue.length - 300);
@@ -874,7 +861,7 @@ usage.load();
 if (usage.queue.length) setTimeout(() => usage.flush(), 3000);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") usage.flush(); });
 
-// ----- In the app: the same editor inside VisionAssist on the phone -----
+// ----- In the app: the same editor inside Whereabouts on the phone -----
 // Opened in the app's own web view (the address ends in #app), the editor
 // asks nobody to sign in: the app hands it the account's access token, and a
 // fresh one before it runs out, and the client sends that token with every
@@ -937,23 +924,15 @@ async function startHosted() {
   await startRemote(client, host.user);
 }
 
-// ----- Language: English, or Arabic (right to left) -----
-// The editor is in the language picked with its العربية / English button, or
-// else the browser's. Its sentences are written in English and looked up in AR
-// (below) for Arabic: %@ marks where a name or a number goes, or %1$@, %2$@
-// where Arabic puts them in another order. What people named things, on the
-// phone or here, shows as they wrote it. tools/check_arabic.py checks that
-// every sentence has its Arabic.
-const LANG_KEY = "va.lang";
-let LANG = (() => {
-  const saved = store.get(LANG_KEY);
-  if (saved === "ar" || saved === "en") return saved;
-  return /^ar\b/i.test(navigator.language || "") ? "ar" : "en";
-})();
-/** A sentence in the editor's language, each %@ filled in. */
+// ----- Wording -----
+// The editor's sentences are written in English where they're used: %@ marks
+// where a name or a number goes (%1$@, %2$@ by number where a line fills them
+// out of order). What people named things, on the phone or here, shows as
+// they wrote it. tools/check_english.py checks that every tr() line is a
+// literal whose %@ match what it's given.
+/** A sentence with each %@ filled in. */
 function tr(english, ...args) {
-  english = String(english ?? "");
-  const text = LANG === "ar" && own(AR, english) !== undefined ? AR[english] : english;
+  const text = String(english ?? "");
   let next = 0;
   return text.replace(/%(?:(\d+)\$)?@/g, (_, n) => String(args[n ? Number(n) - 1 : next++] ?? ""));
 }
@@ -961,772 +940,27 @@ function tr(english, ...args) {
 function N_(english) { return english; }
 /** A table's own entry for a key, or undefined: never what every object has ("constructor"). */
 function own(table, key) { return key != null && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined; }
-/** In Arabic, a part of a sentence kept in its own direction ("Duracell" in an Arabic line). */
-const isolate = (text) => (LANG === "ar" ? "\u2068" + text + "\u2069" : text);
-/** In Arabic, text that reads left to right whatever's around it (coordinates). */
-const leftToRight = (text) => (LANG === "ar" ? "\u2066" + text + "\u2069" : text);
-/** Dates in the editor's language, with the digits the phone shows (0 to 9). */
-const LOCALE = () => (LANG === "ar" ? "ar-u-nu-latn" : undefined);
-const fmtWhen = (time) => new Date(time).toLocaleString(LOCALE(), { dateStyle: "medium", timeStyle: "short" });
-const fmtDay = (time) => new Date(time).toLocaleDateString(LOCALE(), { month: "short", day: "numeric" });
-const ARABIC_LETTER = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
-/** Arabic written loosely the same way, as the phone matches it: no vowel
- *  marks, one alef, ه for ة, ي for ى, digits 0 to 9. */
-function arNorm(text) {
-  return String(text ?? "")
-    .replace(/[ً-ٰٟـۖ-ۭ]/g, "")
-    .replace(/[آأإٱ]/g, "ا").replace(/ة/g, "ه").replace(/[ىئ]/g, "ي").replace(/ؤ/g, "و")
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
-}
-// Counting as the phone does: in Arabic, one and two have words of their own,
-// 3 to 10 take the plural and 11 to 99 the singular ("3 قطع", "11 قطعة").
+const fmtWhen = (time) => new Date(time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const fmtDay = (time) => new Date(time).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const NOUNS = {
-  item: { en: ["item", "items"], ar: ["قطعة واحدة", "قطعتين", "قطع", "قطعة", "قطعة"] },
-  room: { en: ["room", "rooms"], ar: ["غرفة واحدة", "غرفتين", "غرف", "غرفة", "غرفة"] },
-  thing: { en: ["thing", "things"], ar: ["غرض واحد", "غرضين", "أغراض", "غرضًا", "غرض"] },
-  floor: { en: ["floor", "floors"], ar: ["طابق واحد", "طابقين", "طوابق", "طابقًا", "طابق"] },
+  item: ["item", "items"],
+  room: ["room", "rooms"],
+  thing: ["thing", "things"],
+  floor: ["floor", "floors"],
 };
-/** "3 items", or "3 قطع". */
+/** "3 items". */
 function countOf(n, noun) {
-  const { en, ar } = NOUNS[noun];
-  if (LANG !== "ar") return `${n} ${en[n === 1 ? 0 : 1]}`;
-  if (n === 1) return ar[0];
-  if (n === 2) return ar[1];
-  const rest = n > 99 ? n % 100 : n;
-  return `${n} ${rest >= 3 && rest <= 10 ? ar[2] : rest >= 11 ? ar[3] : ar[4]}`;
+  const [one, many] = NOUNS[noun];
+  return `${n} ${n === 1 ? one : many}`;
 }
-/** "و" joined to the word after it ("وكوب", "و5 أغراض"), or set apart from Latin letters ("و Keys"),
- *  looking past the marks that keep a name in its own direction. */
-const arAnd = (word) => (/^[⁦-⁩]*[ء-ي٠-٩ٱ-ۓ۰-ۿ0-9]/.test(word) ? "و" + word : "و " + word);
-/** "a, b, and c", or "أ، ب، وج". */
+/** "a, b, and c". */
 function joinList(parts) {
   if (parts.length < 2) return parts[0] || "";
   const last = parts[parts.length - 1];
-  if (LANG === "ar") return parts.length === 2 ? `${parts[0]} ${arAnd(last)}` : `${parts.slice(0, -1).join("، ")}، ${arAnd(last)}`;
   return parts.length === 2 ? `${parts[0]} and ${last}` : `${parts.slice(0, -1).join(", ")}, and ${last}`;
 }
-/** A kind of item as it's shown: "Electronics", "إلكترونيات". */
+/** A kind of item as it's shown: "Electronics". */
 const categoryName = (c) => (own(CATEGORY_NAMES, c) ? tr(CATEGORY_NAMES[c]) : c ? String(c)[0].toUpperCase() + String(c).slice(1) : "");
-/** What the phone's detector, or its scan, called something: in Arabic, as the app says it. */
-const labelName = (label) => (LANG === "ar" && label ? own(LABEL_AR, label) || own(LABEL_AR, String(label).toLowerCase()) || label : label);
-
-/** Puts the page's fixed text, its direction and the language button in the editor's language. */
-function applyLanguage() {
-  const root = document.documentElement;
-  root.lang = LANG;
-  root.dir = LANG === "ar" ? "rtl" : "ltr";
-  document.title = tr("Whereabouts Rooms");
-  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = tr(el.dataset.i18n); });
-  for (const [data, attribute] of [["i18nPlaceholder", "placeholder"], ["i18nAriaLabel", "aria-label"], ["i18nTitle", "title"]]) {
-    const selector = "[data-" + data.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()) + "]";
-    document.querySelectorAll(selector).forEach((el) => el.setAttribute(attribute, tr(el.dataset[data])));
-  }
-  document.querySelectorAll("[data-lang-switch]").forEach((button) => {
-    button.textContent = LANG === "ar" ? "English" : "العربية";
-    button.lang = LANG === "ar" ? "en" : "ar";
-  });
-}
-
-/** Changes the editor's language; what's on screen is drawn again in it. */
-function setLanguage(lang) {
-  if ((lang !== "ar" && lang !== "en") || lang === LANG) return;
-  const sample = state.mode === "demo" ? sampleData() : null;    // the sample, as it was said
-  LANG = lang;
-  store.set(LANG_KEY, lang);
-  applyLanguage();
-  $("signin-error").hidden = true;
-  if (sample) retranslateSample(sample, sampleData());
-  if (!state.mode) return;
-  showAccount();
-  if (!$("plan-panel").hidden) renderPlan();
-  refreshStatus();
-  if (state.room) $("room-title").title = isMine(state.room) ? "" : sharedBy(state.room);
-  setPlacing(state.placing);
-  if (mapView.picking) $("map-banner-text").textContent = mapView.pickingText();
-  if (state.room) renderAll(); else renderRoomList();
-  if (mapView.map) { mapView.localizeControls(); mapView.updateChrome(); }
-}
-
-/** The sample room said in the new language: its names, notes and things,
- *  where they haven't been changed here (what's open and edited stays). */
-function retranslateSample(before, after) {
-  const was = new Map(before.items.map((i) => [i.id, i])), now = new Map(after.items.map((i) => [i.id, i]));
-  state.items.forEach((item) => {
-    const a = was.get(item.id), b = now.get(item.id);
-    if (!a || !b) return;
-    if (item.name === a.name) item.name = b.name;
-    if (item.note === a.note) item.note = b.note;
-    (item.contents || []).forEach((c) => {
-      const k = (a.contents || []).findIndex((x) => x.name === c.name);
-      if (k >= 0 && b.contents?.[k]) c.name = b.contents[k].name;
-    });
-  });
-  const room = state.room;
-  if (room?.id === before.room.id && room.name === before.room.name) {
-    room.name = after.room.name;
-    state.rooms.forEach((r) => { if (r.id === room.id) r.name = after.room.name; });
-    $("room-title").value = room.name;
-  }
-}
-
-// The editor's Arabic, by its English.
-const AR = {
-  "%1$@ by %2$@": "%1$@ بواسطة %2$@",
-  "%1$@ on the map (%2$@ shared with you). Click one to open it.": "%1$@ على الخريطة (%2$@ منها مشاركة معك). انقر واحدة لتفتحها.",
-  "%1$@ × %2$@ cm": "%1$@ × %2$@ سم",
-  "%1$@, %2$@, on the map": "%1$@، %2$@، على الخريطة",
-  "%1$@, inside %2$@": "%1$@، داخل %2$@",
-  "%@ above the floor": "%@ فوق الأرضية",
-  "%@ asked for %@, but it isn't listed in %@.": "سأل %@ عن «%@»، وهو غير مُدرج في %@.",
-  "%@ can change what's in %@ now.": "يستطيع %@ الآن تغيير ما في %@.",
-  "%@ can look at %@, not change it.": "يستطيع %@ الاطلاع على %@ من دون تغييرها.",
-  "%@ cm": "%@ سم",
-  "%@ couldn't find %@ where the map says it is.": "تعذّر على %@ العثور على %@ في مكانه على الخريطة.",
-  "%@ in the building": "%@ في المبنى",
-  "%@ inside": "%@ بالداخل",
-  "%@ inside drawers and closets": "%@ داخل الأدراج والخزائن",
-  "%@ is private: only you, and the people you share it with.": "أصبحت %@ خاصة: لك وحدك، ولمن تشاركها معهم.",
-  "%@ is public: everyone with an account here can see it.": "أصبحت %@ عامة: يستطيع كل من لديه حساب هنا رؤيتها.",
-  "%@ isn't shared with %@ any more.": "لم تعد %@ مشاركة مع %@.",
-  "%@ m": "%@ م",
-  "%@ moved something: %@": "نقل %@ شيئًا: %@",
-  "%@ on the map": "%@ على الخريطة",
-  "%@ on the map. Click one to open it.": "%@ على الخريطة. انقر واحدة لتفتحها.",
-  "%@% sure": "متأكد بنسبة %@%",
-  "%@'s phone couldn't recognize %@. Its map may need updating.": "تعذّر على هاتف %@ التعرّف على %@. قد تحتاج الخريطة إلى تحديث.",
-  "%@'s room. You can change what's in it: names, notes, what's inside, spots on the plan. Only its owner renames it or says who sees it.": "غرفة %@. يمكنك تغيير ما فيها: الأسماء والملاحظات وما بالداخل والأماكن على المخطط. مالكها وحده يعيد تسميتها أو يحدد من يراها.",
-  "%@'s room. You can see everything in it; only its owner and the people they let edit it change it.": "غرفة %@. يمكنك رؤية كل ما فيها؛ لا يغيّرها إلا مالكها ومن يسمح لهم بالتعديل.",
-  "%@'s room. You can see everything in it; only its owner changes it.": "غرفة %@. يمكنك رؤية كل ما فيها؛ مالكها وحده يغيّرها.",
-  "%@, found from where the phone was when it scanned": "%@، عُرف من مكان الهاتف وقت المسح",
-  "%@: you can look, only its owner changes it": "%@: يمكنك الاطلاع، ومالكها وحده يغيّرها",
-  "%@: you can look; its owner and the people they let edit it change it.": "%@: يمكنك الاطلاع؛ يغيّرها مالكها ومن يسمح لهم بالتعديل.",
-  "0 is the ground floor": "0 هو الطابق الأرضي",
-  "1 m": "1 م",
-  "3D view unavailable": "العرض ثلاثي الأبعاد غير متاح",
-  "A change to the plan couldn't be saved, so the plan is shown as the cloud has it.": "تعذّر حفظ تغيير على المخطط، لذلك يظهر المخطط كما هو في السحابة.",
-  "a place": "مكان",
-  "A room": "غرفة",
-  "a rough pin from the phone": "تثبيت تقريبي من الهاتف",
-  "AA battery": "بطارية AA",
-  "about %@": "نحو %@",
-  "Add": "إضافة",
-  "Add a thing, then press Enter": "أضف غرضًا، ثم اضغط Enter",
-  "Add item": "إضافة غرض",
-  "Added here": "أُضيف هنا",
-  "All": "الكل",
-  "All changes saved": "حُفظت كل التغييرات",
-  "All changes saved · live": "حُفظت كل التغييرات · مباشر",
-  "Also listed by hand": "مسجّل يدويًا أيضًا",
-  "Also shared with": "مشاركة أيضًا مع",
-  "another account": "حساب آخر",
-  "Another account": "حساب آخر",
-  "Apartment": "الشقة",
-  "Apartment %@": "الشقة %@",
-  "Appliance": "جهاز منزلي",
-  "At the Apartment level you can also drag the room into place.": "في مستوى «الشقة» يمكنك أيضًا سحب الغرفة إلى مكانها.",
-  "behind the reading chair": "خلف كرسي القراءة",
-  "Black HDMI cable": "كابل HDMI أسود",
-  "Blue coffee mug": "كوب قهوة أزرق",
-  "Bluetooth speaker": "سماعة بلوتوث",
-  "Board games": "ألعاب لوحية",
-  "Book": "كتاب",
-  "Both are in Supabase under Project Settings, API Keys. They're remembered in this browser.": "كلاهما في Supabase ضمن Project Settings ثم API Keys. يتذكّرهما هذا المتصفح.",
-  "bottom shelf": "الرف السفلي",
-  "Building": "المبنى",
-  "by %@": "بواسطة %@",
-  "Camera batteries": "بطاريات الكاميرا",
-  "Can edit": "يمكنه التعديل",
-  "Can edit: they can change what's in it, from their phone too": "يمكنه التعديل: يستطيع تغيير ما فيها، من هاتفه أيضًا",
-  "Cancel": "إلغاء",
-  "Candle": "شمعة",
-  "Ceiling": "السقف",
-  "Change its size or place on the plan": "غيّر حجمه أو مكانه على المخطط",
-  "Check names": "تحقق من الأسماء",
-  "check the name": "تحقق من الاسم",
-  "Check the plan shows its new place.": "تأكد أن المخطط يُظهر مكانه الجديد.",
-  "Choose a room": "اختر غرفة",
-  "Click a box to open that thing.": "انقر مربعًا لتفتح ذلك الغرض.",
-  "Click a wall where the door is.": "انقر الجدار حيث يقع الباب.",
-  "Click a wall where the doorway is.": "انقر الجدار حيث يقع المدخل.",
-  "Click a wall where the window is.": "انقر الجدار حيث تقع النافذة.",
-  "Click a wall, door, window or piece of furniture to change it, or drag it. Drag an item to move it.": "انقر جدارًا أو بابًا أو نافذة أو قطعة أثاث لتغييرها، أو اسحبها. اسحب أي غرض لتنقله.",
-  "Click a wall, door, window or piece of furniture to change it, or use the tools above the plan to draw what the scan missed. The phones guide by the plan as it's changed here, from their next sync. A new scan of the room replaces these changes.": "انقر جدارًا أو بابًا أو نافذة أو قطعة أثاث لتغييرها، أو استخدم الأدوات فوق المخطط لترسم ما فات المسح. ترشد الهواتف وفق المخطط كما عُدّل هنا، بدءًا من مزامنتها التالية. أي مسح جديد للغرفة يحلّ محل هذه التغييرات.",
-  "Click anything in the plan or the list to rename it, add a note, say how it feels, or list what's inside. Changes reach the phones on their next sync.": "انقر أي شيء في المخطط أو القائمة لتعيد تسميته، أو تضيف ملاحظة، أو تصف ملمسه، أو تسجّل ما بداخله. تصل التغييرات إلى الهواتف في مزامنتها التالية.",
-  "Click anything in the plan or the list to see it, its notes and what's inside.": "انقر أي شيء في المخطط أو القائمة لتراه مع ملاحظاته وما بداخله.",
-  "Click on a wall: doors, doorways and windows go in walls.": "انقر على جدار: الأبواب والمداخل والنوافذ تكون في الجدران.",
-  "Click the plan where %@ is": "انقر مكان %@ على المخطط",
-  "Click the plan where it is": "انقر مكانه على المخطط",
-  "Click the plan where the new item is": "انقر مكان الغرض الجديد على المخطط",
-  "Click your building on the map": "انقر مبناك على الخريطة",
-  "Close": "إغلاق",
-  "Close-up from the phone, %@.": "لقطة قريبة من الهاتف، %@.",
-  "Close-up from the phone.": "لقطة قريبة من الهاتف.",
-  "Close-up of the inside of %@": "لقطة قريبة لداخل %@",
-  "Clothing": "ملابس",
-  "coiled": "ملفوف",
-  "Confirm delete": "تأكيد الحذف",
-  "Confirm your email first: Supabase sent you a link.": "أكّد بريدك الإلكتروني أولًا: أرسل لك Supabase رابطًا.",
-  "Connected": "متصل",
-  "Couldn't change that: %@": "تعذّر تغيير ذلك: %@",
-  "Couldn't change who can see it. Try again.": "تعذّر تغيير من يستطيع رؤيتها. حاول مرة أخرى.",
-  "Couldn't change who can see it: %@": "تعذّر تغيير من يستطيع رؤيتها: %@",
-  "Couldn't mark it done: %@": "تعذّر وضع علامة الإنجاز: %@",
-  "Couldn't reach Supabase. Check the project URL and your internet connection.": "تعذّر الوصول إلى Supabase. تحقق من رابط المشروع ومن اتصالك بالإنترنت.",
-  "Couldn't share it: %@": "تعذّرت المشاركة: %@",
-  "Couldn't stop sharing it: %@": "تعذّر إيقاف المشاركة: %@",
-  "Decor": "ديكور",
-  "Delete": "حذف",
-  "Delete %1$@ and the %2$@ found inside it?": "حذف %1$@ مع ما وُجد بداخله (%2$@)؟",
-  "Delete %@?": "حذف %@؟",
-  "Delete item": "حذف الغرض",
-  "Delete this thing": "حذف هذا الغرض",
-  "Depth (cm)": "العمق (سم)",
-  "Done": "تم",
-  "Door": "باب",
-  "Doorway": "مدخل",
-  "Downstairs": "الطابق السفلي",
-  "Drag across the plan from one corner of the furniture to the other.": "اسحب على المخطط من إحدى زوايا قطعة الأثاث إلى الزاوية المقابلة.",
-  "Drag from where the wall starts to where it ends. Its ends snap to other walls (hold Alt so they don't).": "اسحب من بداية الجدار إلى نهايته. يلتصق طرفاه بالجدران الأخرى (اضغط باستمرار على Alt كي لا يلتصقا).",
-  "Drag further: furniture is at least 15 cm across.": "اسحب أبعد: لا يقل عرض قطعة الأثاث عن 15 سم.",
-  "Drag it along its wall to move it, or its ends to make it wider or narrower.": "اسحبه على امتداد جداره لتنقله، أو اسحب طرفيه لتوسيعه أو تضييقه.",
-  "Drag it along its wall, or its ends to make it wider or narrower.": "اسحبه على امتداد جداره، أو اسحب طرفيه لتوسيعه أو تضييقه.",
-  "Drag it on the plan to move it, a corner to resize it, or the round handle to turn it.": "اسحبها على المخطط لتنقلها، أو اسحب زاوية لتغيير حجمها، أو المقبض الدائري لتديرها.",
-  "Drag it to move it, a corner to resize it, or the round handle to turn it.": "اسحبها لتنقلها، أو اسحب زاوية لتغيير حجمها، أو المقبض الدائري لتديرها.",
-  "Drag its ends to move them: walls that meet there follow. Drag the wall itself to slide it. Its doors and windows go with it.": "اسحب طرفيه لتحريكهما، فتتبعهما الجدران الملتقية عندهما. اسحب الجدار نفسه لتزيحه. تنتقل أبوابه ونوافذه معه.",
-  "Drag the wall's ends to move them (walls that meet there follow), or the wall to slide it.": "اسحب طرفي الجدار لتحريكهما (تتبعهما الجدران الملتقية عندهما)، أو اسحب الجدار لتزيحه.",
-  "Drag to make it wider or narrower": "اسحب للتوسيع أو التضييق",
-  "Drag to move this end of the wall": "اسحب لتحريك هذا الطرف من الجدار",
-  "Drag to resize": "اسحب لتغيير الحجم",
-  "Drag to rotate map, click to reset north": "اسحب لتدوير الخريطة، وانقر لإعادتها إلى الشمال",
-  "Drag to turn": "اسحب للتدوير",
-  "Draw a piece of furniture": "ارسم قطعة أثاث",
-  "Draw a wall": "ارسم جدارًا",
-  "Edit plan": "تعديل المخطط",
-  "Ask": "اسأل",
-  "Ask about this room": "اسأل عن هذه الغرفة",
-  "Start again": "ابدأ من جديد",
-  "Send": "إرسال",
-  "Your question": "سؤالك",
-  "Where are the keys?": "أين المفاتيح؟",
-  "What's hard to find here, and how could it be easier?": "ما الذي يصعب العثور عليه هنا، وكيف يمكن تسهيله؟",
-  "What would a room like this usually have that isn't listed?": "ما الذي توجد عادةً في غرفة كهذه ولم يُدرج هنا؟",
-  "Which places are crowded?": "أي الأماكن مزدحمة؟",
-  "Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.": "اسأل عمّا في %@: أين الأشياء، وما الذي يمكن تسهيل العثور عليه، وما يوجد عادةً في غرفة كهذه، وأين الازدحام. تأتي الإجابات من الغرفة كما هي مدرجة هنا.",
-  "Thinking…": "جارٍ التفكير…",
-  "Sign in again to ask.": "سجّل الدخول مرة أخرى لتسأل.",
-  "The assistant needs Whereabouts Plus, like Claude in Find: in the app, gear icon, Claude, Get Plus. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى Whereabouts Plus، مثل Claude في البحث: في التطبيق، رمز الترس، ثم Claude، ثم احصل على Plus. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
-  "The assistant needs Whereabouts Plus, like Claude in Find. In a room shared with you, its owner's Plus counts.": "يحتاج المساعد إلى Whereabouts Plus، مثل Claude في البحث. وفي غرفة مشاركة معك، يُحتسب Plus الخاص بمالكها.",
-  "Rooms and Plus": "الغرف وPlus",
-  "Get Plus": "احصل على Plus",
-  "Get Plus: %@ a month": "احصل على Plus: %@ شهريًا",
-  "Rooms left": "الغرف المتبقية",
-  "Rooms bought": "الغرف المشتراة",
-  "%@ (%@ of scanning)": "%@ (%@ من المسح)",
-  "%@ a room": "%@ للغرفة",
-  "Plus, for Find": "Plus، للبحث",
-  "Active": "مفعّل",
-  "Not active": "غير مفعّل",
-  "Checking your account…": "جارٍ التحقق من حسابك…",
-  "Couldn't check your account just now.": "تعذّر التحقق من حسابك الآن.",
-  "Your first room is free. After that, buy rooms: a room is one scan of up to two minutes with the iPhone, with Claude naming what it sees and what's inside the drawers you open. Rooms never expire.": "غرفتك الأولى مجانية. بعدها اشترِ غرفًا: الغرفة مسح واحد بالآيفون لا يتجاوز دقيقتين، يسمّي فيه Claude ما يراه وما بداخل الأدراج التي تفتحها. الغرف لا تنتهي صلاحيتها.",
-  "Plus is on for this account.": "Plus مفعّل لهذا الحساب.",
-  "Change or cancel Plus": "تغيير Plus أو إلغاؤه",
-  "Claude finds what the phone can't see and reads labels in Find, for you and everyone you share your rooms with, and answers questions about your rooms here.": "يعثر Claude في البحث على ما لا يراه الهاتف ويقرأ الملصقات، لك ولكل من تشاركهم غرفك، ويجيب هنا عن أسئلتك حول غرفك.",
-  "Paying opens a secure Stripe page in a new tab, made out to the account you're signed in with (%@). What you buy is on it as soon as the payment goes through: come back here afterwards.": "يفتح الدفع صفحة Stripe آمنة في علامة تبويب جديدة، باسم الحساب الذي سجّلت الدخول به (%@). يُضاف ما تشتريه إليه بمجرد إتمام الدفع: عد إلى هنا بعد ذلك.",
-  "Paid already? Check again": "دفعت بالفعل؟ تحقّق مرة أخرى",
-  "Organizations and sponsors": "المؤسسات والرعاة",
-  "Whereabouts for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.": "Whereabouts لعملاء مؤسسة (جهة تأهيل، دار رعاية)، أو رعاية اشتراك Plus لمن لا يستطيع دفعه: راسلنا لمعرفة الأسعار.",
-  "Support Whereabouts": "ادعم Whereabouts",
-  "A donation of any amount helps keep Whereabouts going, and the first room free for everyone.": "أي تبرع، مهما كان مبلغه، يساعد على استمرار Whereabouts وعلى بقاء الغرفة الأولى مجانية للجميع.",
-  "Donate": "تبرّع",
-  "Plus is on. Thank you!": "تم تفعيل Plus. شكرًا لك!",
-  "%@ added. Thank you!": "أُضيفت %@. شكرًا لك!",
-  "Nothing new has reached %@ yet. If you've just paid, wait a minute and check again.": "لم يصل شيء جديد إلى %@ بعد. إن كنت قد دفعت للتو، فانتظر دقيقة وتحقق مرة أخرى.",
-  "This month's Claude allowance is used up. It starts again next month.": "استُنفدت حصة Claude لهذا الشهر. تبدأ من جديد الشهر القادم.",
-  "Claude isn't set up in this cloud yet.": "لم يُعدّ Claude في هذه السحابة بعد.",
-  "Busy for a moment: try again.": "مشغول للحظة: حاول مرة أخرى.",
-  "Claude took too long to answer. Try again.": "استغرق Claude وقتًا طويلًا في الإجابة. حاول مرة أخرى.",
-  "Couldn't ask: %@": "تعذّر السؤال: %@",
-  "Couldn't reach the assistant. Is the computer online?": "تعذّر الوصول إلى المساعد. هل الكمبيوتر متصل بالإنترنت؟",
-  "Free to try in the sample room; your own rooms need Plus.": "مجاني للتجربة في الغرفة التجريبية؛ أما غرفك فتحتاج إلى Plus.",
-  "Questions and answers are kept for 90 days, so whoever runs this service can see what the assistant is asked and where it falls short.": "تُحفظ الأسئلة والإجابات لمدة 90 يومًا، ليرى من يدير هذه الخدمة ما يُسأل عنه المساعد وأين يقصّر.",
-  "The sample room's assistant has answered enough for today. Sign in to ask about your own rooms.": "أجاب مساعد الغرفة التجريبية بما يكفي لهذا اليوم. سجّل الدخول لتسأل عن غرفك.",
-  "Editing the plan": "تعديل المخطط",
-  "Electronics": "إلكترونيات",
-  "Email": "البريد الإلكتروني",
-  "Everyone with an account in this cloud will see it: where it is on the map, its plan, and every item with its notes and photos. Only you can change it, and you can make it private again at any time.": "سيراها كل من لديه حساب في هذه السحابة: مكانها على الخريطة، ومخططها، وكل غرض فيها مع ملاحظاته وصوره. أنت وحدك تستطيع تغييرها، ويمكنك جعلها خاصة مرة أخرى في أي وقت.",
-  "Explore a sample room": "استكشف غرفة تجريبية",
-  "faces %@° from north": "باتجاه %@° من الشمال",
-  "Fill in all four fields.": "املأ الحقول الأربعة كلها.",
-  "Find an item": "ابحث عن غرض",
-  "Find it and place it again, or note where it is now.": "ابحث عنه وضعه مرة أخرى، أو اكتب أين هو الآن.",
-  "Fit the room": "ملاءمة الغرفة",
-  "Fixture": "تجهيزات ثابتة",
-  "Floor": "الطابق",
-  "Floor %@": "الطابق %@",
-  "Floor lamp": "مصباح أرضي",
-  "Floor not set: shown on the ground floor": "لم يُحدَّد الطابق: تظهر على الطابق الأرضي",
-  "Floor plan": "مخطط الأرضية",
-  "Floor size": "أبعاد الأرضية",
-  "Floors in the building": "عدد طوابق المبنى",
-  "folded": "مطوية",
-  "Food": "طعام",
-  "Found by the phone": "وجده الهاتف",
-  "Found inside": "وُجد في الداخل",
-  "Found inside %@": "ما وُجد داخل %@",
-  "Found inside it": "ما وُجد بداخله",
-  "Found inside: %@": "ما وُجد في الداخل: %@",
-  "Framed beach photo": "صورة شاطئ في إطار",
-  "Furniture": "أثاث",
-  "Furniture measured by the scan": "أثاث قاسه المسح",
-  "Go": "اذهب",
-  "Go back to where the phone was": "ارجع إلى حيث كان الهاتف",
-  "Go to where this computer is": "اذهب إلى مكان هذا الحاسوب",
-  "Gray sectional sofa": "كنبة زاوية رمادية",
-  "Ground floor": "الطابق الأرضي",
-  "HDMI cables": "كابلات HDMI",
-  "Height": "الارتفاع",
-  "Height (cm)": "الارتفاع (سم)",
-  "Height above the floor (m)": "الارتفاع فوق الأرضية (م)",
-  "How close to look": "مدى القرب",
-  "How it feels": "ملمسه",
-  "If it's in the room, add it to the plan or list it in a drawer.": "إذا كان في الغرفة، فأضفه إلى المخطط أو سجّله في درج.",
-  "Inside": "داخل",
-  "It has no place on the map yet.": "ليس لها مكان على الخريطة بعد.",
-  "It isn't in a wall the plan has.": "ليس في جدار من جدران المخطط.",
-  "It may be closed": "قد يكون مغلقًا",
-  "It needs an internet connection (the map comes from OpenFreeMap).": "تحتاج إلى اتصال بالإنترنت (الخريطة من OpenFreeMap).",
-  "It's already shared with %@.": "إنها مشاركة بالفعل مع %@.",
-  "It's back": "عاد",
-  "It's removed from the phone too, on its next sync.": "يُزال من الهاتف أيضًا في مزامنته التالية.",
-  "Item": "غرض",
-  "Items": "الأغراض",
-  "Items not counted": "لم تُعدّ الأغراض",
-  "Its floor isn't set.": "لم يُحدَّد طابقها.",
-  "Its item was deleted, but the phones still steer around it. Take it out if it isn't there any more.": "حُذف غرضها، لكن الهواتف ما زالت تتفاداها. أزلها إن لم تعد موجودة.",
-  "Its owner deleted that room.": "حذف مالكها هذه الغرفة.",
-  "Its shape on the plan": "الشكل على المخطط",
-  "Keep it": "أبقِه",
-  "Keep it private": "أبقِها خاصة",
-  "Kind": "النوع",
-  "Kind of furniture": "نوع الأثاث",
-  "Kitchenware": "أدوات مطبخ",
-  "Last edited": "آخر تعديل",
-  "Latitude, longitude, as any map app copies them.": "خط العرض، خط الطول، كما ينسخهما أي تطبيق خرائط.",
-  "Leave the sample": "الخروج من العيّنة",
-  "Connecting to your account…": "جارٍ الاتصال بحسابك…",
-  "Sign in to the cloud in the app first (gear icon, Account), then open the editor again.": "سجّل الدخول إلى السحابة في التطبيق أولًا (رمز الترس، الحساب)، ثم افتح المحرر مرة أخرى.",
-  "left drawer": "الدرج الأيسر",
-  "Length (cm)": "الطول (سم)",
-  "Lighting": "إضاءة",
-  "Lined up with its building's walls. The compass readings disagreed, so check which way it faces: a 90° turn may be needed.": "صُفّت مع جدران مبناها. اختلفت قراءات البوصلة، لذلك تحقق من اتجاهها: قد تلزم استدارة 90°.",
-  "Lined up with its building's walls. There was no compass reading, so check which way it faces: a 90° turn may be needed.": "صُفّت مع جدران مبناها. لم تكن هناك قراءة للبوصلة، لذلك تحقق من اتجاهها: قد تلزم استدارة 90°.",
-  "Living room (sample)": "غرفة المعيشة (عيّنة)",
-  "Loading rooms…": "جارٍ تحميل الغرف…",
-  "Looked inside": "نُظر بداخله",
-  "Looking up who it's shared with…": "جارٍ البحث عمّن تُشارَك معهم…",
-  "Make %@ public?": "جعل %@ عامة؟",
-  "Make it public": "اجعلها عامة",
-  "Make private": "اجعلها خاصة",
-  "Make public…": "اجعلها عامة…",
-  "Map": "الخريطة",
-  "Map of where the room is": "خريطة مكان الغرفة",
-  "Map updated": "آخر تحديث للخريطة",
-  "map updated %@": "حُدّثت الخريطة في %@",
-  "Mark done": "وضع علامة الإنجاز",
-  "Marked done.": "وُضعت علامة الإنجاز.",
-  "measured with LiDAR": "قيس بعمق الليدار",
-  "Media console": "وحدة التلفزيون",
-  "Media console drawer": "درج وحدة التلفزيون",
-  "Medicine": "دواء",
-  "Move down half a meter": "حرّكها نصف متر إلى الأسفل",
-  "Move left half a meter": "حرّكها نصف متر إلى اليسار",
-  "Move on the plan": "انقله على المخطط",
-  "Move or turn the room in its building": "حرّك الغرفة أو أدِرها في مبناها",
-  "Move right half a meter": "حرّكها نصف متر إلى اليمين",
-  "Move up half a meter": "حرّكها نصف متر إلى الأعلى",
-  "Mustard throw pillow": "وسادة بلون الخردل",
-  "Name": "الاسم",
-  "Named by Claude": "سمّاه Claude",
-  "Needs attention": "يحتاج إلى انتباه",
-  "New item": "غرض جديد",
-  "no building outline here": "لا توجد حدود مبنى هنا",
-  "No building outline here on the map.": "لا توجد حدود مبنى هنا على الخريطة.",
-  "No building outline here on the map. The circle is where the phone was (within about %@ m).": "لا توجد حدود مبنى هنا على الخريطة. الدائرة هي مكان الهاتف (بدقة نحو %@ م).",
-  "No close-up photo.": "لا توجد صورة قريبة.",
-  "No items in this room yet.": "لا توجد أغراض في هذه الغرفة بعد.",
-  "No place on the map yet: open the map, click “Pick the building”, then click your building. Or type its coordinates below.": "لا مكان لها على الخريطة بعد: افتح الخريطة، وانقر «اختر المبنى»، ثم انقر مبناك. أو اكتب إحداثياتها أدناه.",
-  "No plan yet": "لا يوجد مخطط بعد",
-  "No rooms have a place on the map yet.": "لا توجد غرف لها مكان على الخريطة بعد.",
-  "No rooms of your own yet. Scan a room with the iPhone app while signed in, and it appears here.": "لا توجد غرف خاصة بك بعد. امسح غرفة بتطبيق الآيفون وأنت مسجّل الدخول، وستظهر هنا.",
-  "No rooms yet. Scan a room with the iPhone app while signed in, and it appears here.": "لا توجد غرف بعد. امسح غرفة بتطبيق الآيفون وأنت مسجّل الدخول، وستظهر هنا.",
-  "Not placed yet": "لم يوضع بعد",
-  "Not saved yet (%@). Retrying…": "لم يُحفظ بعد (%@). جارٍ إعادة المحاولة…",
-  "Not shared with anyone yet.": "لم تُشارَك مع أحد بعد.",
-  "not sure": "غير متأكد",
-  "Not sure of the name": "الاسم غير مؤكد",
-  "Note": "ملاحظة",
-  "Nothing matches.": "لا شيء يطابق.",
-  "Nothing was found inside.": "لم يُعثر على شيء في الداخل.",
-  "Now click your building": "الآن انقر مبناك",
-  "Oak coffee table": "طاولة قهوة من خشب البلوط",
-  "Office": "أدوات مكتبية",
-  "on the hook by the door": "على العلّاقة بجانب الباب",
-  "On the way through it, the phone says “It may be closed.”": "عند المرور عبره، يقول الهاتف «قد يكون مغلقًا».",
-  "Open %@": "افتح %@",
-  "open media console drawer": "درج وحدة التلفزيون مفتوحًا",
-  "Opening the room…": "جارٍ فتح الغرفة…",
-  "or": "أو",
-  "Other": "أخرى",
-  "Passport": "جواز السفر",
-  "Password": "كلمة المرور",
-  "Personal": "أغراض شخصية",
-  "Photo albums": "ألبومات صور",
-  "Photo of %@ from the scan": "صورة %@ من المسح",
-  "Pick": "اختيار",
-  "Pick a different building": "اختر مبنى آخر",
-  "Pick a room on the left to see its plan.": "اختر غرفة من القائمة لترى مخططها.",
-  "Pick and drag (Esc)": "اختر واسحب (Esc)",
-  "Pick the building": "اختر المبنى",
-  "picked on this plan": "اختير على هذا المخطط",
-  "pinned before the scan": "ثُبّت قبل المسح",
-  "Pinned by hand on the phone": "ثُبّت يدويًا على الهاتف",
-  "pinned on a surface": "ثُبّت على سطح",
-  "Pinned on the phone. A move or a height set here replaces that pin, and the phone looks for it there.": "مُثبّت على الهاتف. أي نقل أو ارتفاع تحدده هنا يحلّ محل هذا التثبيت، ويبحث عنه الهاتف هناك.",
-  "Place at coordinates": "ضعها عند إحداثيات",
-  "Place on the plan": "ضعه على المخطط",
-  "Place the room there": "ضع الغرفة هناك",
-  "Placed here on the map.": "وُضعت هنا على الخريطة.",
-  "Plan": "المخطط",
-  "Plan changed": "آخر تعديل للمخطط",
-  "Previous scan": "المسح السابق",
-  "Restore previous scan": "استعادة المسح السابق",
-  "Confirm restore": "تأكيد الاستعادة",
-  "Go back to the scan of %@?": "العودة إلى مسح %@؟",
-  "Its walls, furniture, items and map come back, and this scan is kept instead, so you can switch back. The phones take it at their next sync.": "تعود جدرانه وأثاثه وأغراضه وخريطته، ويُحتفظ بهذا المسح بدلًا منه، فيمكنك العودة إليه. تأخذه الهواتف في مزامنتها التالية.",
-  "Restore": "استعادة",
-  "Keep this one": "أبقِ هذا",
-  "Restoring the previous scan…": "جارٍ استعادة المسح السابق…",
-  "There's no earlier scan of this room to go back to.": "لا يوجد مسح أقدم لهذه الغرفة للعودة إليه.",
-  "The previous scan is back. The phones take it at their next sync.": "عاد المسح السابق. تأخذه الهواتف في مزامنتها التالية.",
-  "Named aloud during the scan": "سُمّي بصوت عالٍ أثناء المسح",
-  "On": "على",
-  "as the scan measured it": "كما قاسه المسح",
-  "Plant": "نبات",
-  "Position": "الموضع",
-  "Private": "خاصة",
-  "Private: only you and the people you share it with can see this room. Make it public": "خاصة: لا يرى هذه الغرفة إلا أنت ومن تشاركها معهم. اجعلها عامة",
-  "Private: only you and the people you share it with can see this room.": "خاصة: لا يرى هذه الغرفة إلا أنت ومن تشاركها معهم.",
-  "Public rooms are off in this cloud: share the room with the people who should see it.": "الغرف العامة متوقفة في هذه السحابة: شارك الغرفة مع من يجب أن يراها.",
-  "Public rooms are off in this cloud, so only you and the people you share it with can see it. Make it private to match.": "الغرف العامة متوقفة في هذه السحابة، لذلك لا يراها إلا أنت ومن تشاركها معهم. اجعلها خاصة لتتطابق.",
-  "Private: only you, and the people you share it with below. It goes to their phone too, to find things with. Those you let edit it can change what's in it.": "خاصة: لك وحدك، ولمن تشاركها معهم أدناه. تصل إلى هواتفهم أيضًا ليعثروا بها على الأشياء. ومن تسمح لهم بالتعديل يستطيعون تغيير ما فيها.",
-  "Public": "عامة",
-  "Public: every account in this cloud can see this room. Make it private": "عامة: يستطيع كل حساب في هذه السحابة رؤية هذه الغرفة. اجعلها خاصة",
-  "Public: everyone with an account in this cloud can see it, and everything in it. Only you, and the people below you let edit it, can change it.": "عامة: يستطيع كل من لديه حساب في هذه السحابة رؤيتها ورؤية كل ما فيها. لا يغيّرها إلا أنت ومن تسمح لهم بالتعديل أدناه.",
-  "Publishable key": "المفتاح القابل للنشر",
-  "Put a door in a wall": "ضع بابًا في جدار",
-  "Put a doorway with no door in a wall": "ضع مدخلًا بلا باب في جدار",
-  "Put a window in a wall": "ضع نافذة في جدار",
-  "Put down on the phone, said aloud": "وُضع بالصوت على الهاتف",
-  "Puts the floor at its height": "يضع الطابق على ارتفاعه",
-  "Read out on the phone when someone reaches it, so they know it's the right thing.": "يُقرأ على الهاتف عندما يصل إليه أحد، ليعرف أنه الشيء الصحيح.",
-  "Reading chair": "كرسي القراءة",
-  "Recognized": "التعرّف",
-  "Reconnecting…": "جارٍ إعادة الاتصال…",
-  "Redo": "إعادة",
-  "Redo (Ctrl+Shift+Z)": "إعادة (Ctrl+Shift+Z)",
-  "Remove %@": "إزالة %@",
-  "Room": "الغرفة",
-  "Room name": "اسم الغرفة",
-  "Rooms": "الغرف",
-  "Rooms and items": "الغرف والأغراض",
-  "Said on the phone: taken from where it's pinned. If it's there again, click It's back.": "قيل على الهاتف: أُخذ من مكانه المثبّت. إذا عاد إلى هناك، انقر «عاد».",
-  "Sample room: changes aren't saved": "غرفة تجريبية: التغييرات لا تُحفظ",
-  "Saving before signing out…": "جارٍ الحفظ قبل تسجيل الخروج…",
-  "Saving…": "جارٍ الحفظ…",
-  "sb_publishable_… or the anon key": "sb_publishable_… أو مفتاح anon",
-  "Scan the room again with the phone, or pin a few places, to refresh its map.": "امسح الغرفة مرة أخرى بالهاتف، أو ثبّت بعض الأماكن، لتحديث خريطتها.",
-  "Scanned": "تاريخ المسح",
-  "scanned %@": "مُسحت في %@",
-  "See and edit the rooms your iPhone scanned": "اطّلع على الغرف التي مسحها الآيفون وعدّلها",
-  "See your rooms on the map": "اعرض غرفك على الخريطة",
-  "seen as “%@”": "رآه الهاتف «%@»",
-  "Selected item": "الغرض المحدد",
-  "Share": "مشاركة",
-  "Share with": "المشاركة مع",
-  "shared": "مشاركة",
-  "Shared with": "مشاركة مع",
-  "Shared with %@. It's on their phone once they sign in to Whereabouts with that email, and they can change what's in it.": "تمت المشاركة مع %@. ستظهر على هواتفهم عندما يسجّلون الدخول إلى Whereabouts بهذا البريد، ويمكنهم تغيير ما فيها.",
-  "Shared with %@. It's on their phone once they sign in to Whereabouts with that email.": "تمت المشاركة مع %@. ستظهر على هواتفهم عندما يسجّلون الدخول إلى Whereabouts بهذا البريد.",
-  "Shared with you": "مشاركة معك",
-  "Shared with you to edit": "مشاركة معك للتعديل",
-  "Show on the map": "اعرضها على الخريطة",
-  "Sign in": "تسجيل الدخول",
-  "Sign in with the same account as the app (Settings, Cloud).": "سجّل الدخول بالحساب نفسه الذي تستخدمه في التطبيق (الإعدادات، السحابة).",
-  "Sign out": "تسجيل الخروج",
-  "Signed in as %@": "مسجّل الدخول باسم %@",
-  "Signing in…": "جارٍ تسجيل الدخول…",
-  "Silver laptop": "حاسوب محمول فضي",
-  "Size": "الحجم",
-  "Smooth glass jar, metal lid, cold": "برطمان زجاجي أملس، غطاء معدني، بارد",
-  "Snake plant": "نبتة جلد النمر",
-  "Some changes aren't saved yet. Click Sign out again to leave without them.": "بعض التغييرات لم تُحفظ بعد. انقر «تسجيل الخروج» مرة أخرى لتغادر من دونها.",
-  "Someone": "أحد أفراد العائلة",
-  "something": "غرض",
-  "Spare AA batteries": "بطاريات AA احتياطية",
-  "Spare house keys": "مفاتيح البيت الاحتياطية",
-  "Spare TV remote": "جهاز تحكم احتياطي للتلفزيون",
-  "Stack of paperbacks": "كومة كتب ورقية",
-  "Stop sharing with %@": "إيقاف المشاركة مع %@",
-  "Storage": "تخزين",
-  "Storey": "الطابق",
-  "Supabase didn't accept the publishable key.": "لم يقبل Supabase المفتاح القابل للنشر.",
-  "Supabase project URL": "رابط مشروع Supabase",
-  "Take out this door": "أزل هذا الباب",
-  "Take out this doorway": "أزل هذا المدخل",
-  "Take out this furniture": "أزل قطعة الأثاث هذه",
-  "Take out this wall": "أزل هذا الجدار",
-  "Take out this window": "أزل هذه النافذة",
-  "Taken": "أُخذ",
-  "Takeout menu": "قائمة طعام سفري",
-  "Textile": "منسوجات",
-  "That change can't be made to the plan.": "لا يمكن إجراء هذا التغيير على المخطط.",
-  "That item": "هذا الغرض",
-  "That room isn't there any more, or isn't shared with you now.": "لم تعد هذه الغرفة موجودة، أو لم تعد مشاركة معك.",
-  "That room was deleted on the phone.": "حُذفت هذه الغرفة على الهاتف.",
-  "That wall is too short for it.": "هذا الجدار أقصر من أن يتسع له.",
-  "That's a secret key, which must stay on a server. Paste the publishable key (sb_publishable_…) or the anon key instead.": "هذا مفتاح سري، ويجب أن يبقى على خادم. الصق بدلًا منه المفتاح القابل للنشر (sb_publishable_…) أو مفتاح anon.",
-  "That's your own email: your rooms are always yours to see.": "هذا بريدك أنت: غرفك متاحة لك دائمًا.",
-  "The 3D library didn't load. Check your internet connection, or use the plan.": "لم تُحمَّل مكتبة العرض ثلاثي الأبعاد. تحقق من اتصالك بالإنترنت، أو استخدم المخطط.",
-  "The browser didn't share where this computer is. Zoom in on the map instead.": "لم يشارك المتصفح مكان هذا الحاسوب. قرّب الخريطة بدلًا من ذلك.",
-  "The building": "المبنى",
-  "The cloud database isn't set up yet. Run cloud/supabase-setup.sql in Supabase's SQL Editor.": "قاعدة البيانات السحابية غير مُعدّة بعد. شغّل cloud/supabase-setup.sql في محرر SQL في Supabase.",
-  "The cloud database needs an update: run cloud/supabase-setup.sql again in Supabase's SQL Editor.": "قاعدة البيانات السحابية تحتاج إلى تحديث: شغّل cloud/supabase-setup.sql مرة أخرى في محرر SQL في Supabase.",
-  "The compass readings disagreed, so check which way it faces.": "اختلفت قراءات البوصلة، لذلك تحقق من اتجاهها.",
-  "The email or password wasn't accepted.": "لم يُقبل البريد الإلكتروني أو كلمة المرور.",
-  "The email they sign in with, on the phone and here.": "البريد الإلكتروني الذي يسجّلون الدخول به، على الهاتف وهنا.",
-  "The email they sign in with, on the phone and here. While it's public, everyone can see it anyway.": "البريد الإلكتروني الذي يسجّلون الدخول به، على الهاتف وهنا. ما دامت عامة، يستطيع الجميع رؤيتها على أي حال.",
-  "The map didn't load": "لم تُحمَّل الخريطة",
-  "The phone scanned this room again, so the changes made to the plan here weren't kept. Showing the new scan.": "مسح الهاتف هذه الغرفة مرة أخرى، لذلك لم تُحفظ التغييرات التي أُجريت على المخطط هنا. يظهر المسح الجديد.",
-  "The phone scanned this room again. Showing the new scan.": "مسح الهاتف هذه الغرفة مرة أخرى. يظهر المسح الجديد.",
-  "The phone's position was too rough (within about %@ m) to tell which building. Click “Pick the building” in the panel.": "كان موضع الهاتف تقريبيًا جدًا (بدقة نحو %@ م) لمعرفة المبنى. انقر «اختر المبنى» في اللوحة.",
-  "The plan was changed elsewhere meanwhile, so the last change made here wasn't kept. Showing the latest.": "عُدّل المخطط في مكان آخر في هذه الأثناء، لذلك لم يُحفظ آخر تغيير أُجري هنا. يظهر الأحدث.",
-  "The plan was changed elsewhere. Showing the latest.": "عُدّل المخطط في مكان آخر. يظهر الأحدث.",
-  "The room": "الغرفة",
-  "the room": "الغرفة",
-  "The room was renamed “%@” on the phone meanwhile.": "أُعيدت تسمية الغرفة إلى «%@» على الهاتف في هذه الأثناء.",
-  "The Supabase library didn't load. Check your internet connection.": "لم تُحمَّل مكتبة Supabase. تحقق من اتصالك بالإنترنت.",
-  "There was no compass reading, so check which way it faces.": "لم تكن هناك قراءة للبوصلة، لذلك تحقق من اتجاهها.",
-  "There's no building outline on the map there, so the room is placed at that spot.": "لا توجد حدود مبنى على الخريطة هناك، لذلك وُضعت الغرفة في تلك النقطة.",
-  "They're removed from the phone too, on its next sync.": "تُزال من الهاتف أيضًا في مزامنته التالية.",
-  "Thing %@": "الغرض %@",
-  "Things in or on it": "الأغراض فيه أو عليه",
-  "This browser can't say where it is. Zoom in on the map instead.": "لا يستطيع هذا المتصفح تحديد مكانه. قرّب الخريطة بدلًا من ذلك.",
-  "This computer's clock is ahead of the cloud's, so changes can't be saved. Set its date and time automatically.": "ساعة هذا الحاسوب متقدمة على ساعة السحابة، لذلك لا يمكن حفظ التغييرات. اضبط التاريخ والوقت تلقائيًا.",
-  "this place": "هذا المكان",
-  "This room": "هذه الغرفة",
-  "this room": "هذه الغرفة",
-  "This room has no place on the map yet. Click “Pick the building” in the panel, then click your building.": "ليس لهذه الغرفة مكان على الخريطة بعد. انقر «اختر المبنى» في اللوحة، ثم انقر مبناك.",
-  "This room hasn't been scanned. Its items are listed on the left.": "لم تُمسح هذه الغرفة بعد. أغراضها مدرجة في القائمة.",
-  "This room is shared with you to look at now.": "هذه الغرفة مشاركة معك الآن للاطلاع فقط.",
-  "To change the plan, the cloud database needs an update: run cloud/supabase-setup.sql again in Supabase's SQL Editor. It keeps everything already there.": "لتعديل المخطط، تحتاج قاعدة البيانات السحابية إلى تحديث: شغّل cloud/supabase-setup.sql مرة أخرى في محرر SQL في Supabase. يبقى كل ما فيها كما هو.",
-  "To fix its walls, doors or furniture, or add what the scan missed, click Edit plan.": "لتصحيح جدرانها أو أبوابها أو أثاثها، أو لإضافة ما فات المسح، انقر «تعديل المخطط».",
-  "To make rooms public or share them, the cloud database needs an update: run cloud/supabase-setup.sql again in Supabase's SQL Editor.": "لجعل الغرف عامة أو مشاركتها، تحتاج قاعدة البيانات السحابية إلى تحديث: شغّل cloud/supabase-setup.sql مرة أخرى في محرر SQL في Supabase.",
-  "To save the floor, apartment and building, the cloud database needs an update: run cloud/supabase-setup.sql again in Supabase's SQL Editor.": "لحفظ الطابق والشقة والمبنى، تحتاج قاعدة البيانات السحابية إلى تحديث: شغّل cloud/supabase-setup.sql مرة أخرى في محرر SQL في Supabase.",
-  "Toggle attribution": "إظهار المصادر أو إخفاؤها",
-  "Tool": "أداة",
-  "Top desk drawer": "الدرج العلوي للمكتب",
-  "Toy": "لعبة",
-  "Try again": "حاول مرة أخرى",
-  "Turn (°)": "الدوران (°)",
-  "Turn a quarter turn": "أدِرها ربع دورة",
-  "Turn around": "أدِرها نصف دورة",
-  "Turn left 5 degrees": "أدِرها 5 درجات إلى اليسار",
-  "Turn right 5 degrees": "أدِرها 5 درجات إلى اليمين",
-  "Turned to line up with its building's walls.": "أُديرت لتصطف مع جدران مبناها.",
-  "TV": "تلفزيون",
-  "TV remote": "جهاز تحكم التلفزيون",
-  "Type the email they sign in with, like maria@example.com.": "اكتب البريد الإلكتروني الذي يسجّلون الدخول به، مثل maria@example.com.",
-  "Type the latitude and longitude, like 30.0444, 31.2357.": "اكتب خط العرض وخط الطول، مثل 30.0444, 31.2357.",
-  "Undo": "تراجع",
-  "Undo (Ctrl+Z)": "تراجع (Ctrl+Z)",
-  "Unnamed": "بلا اسم",
-  "Until it's pinned on the phone, the phone uses this spot.": "إلى أن يُثبّت على الهاتف، يستخدم الهاتف هذا المكان.",
-  "Untitled room": "غرفة بلا اسم",
-  "Upstairs": "الطابق العلوي",
-  "USB charger": "شاحن USB",
-  "View": "العرض",
-  "Whereabouts Rooms": "غرف Whereabouts",
-  "Wall": "جدار",
-  "Wall clock": "ساعة حائط",
-  "What it is": "ما هو",
-  "Where exactly, what it's for, anything that helps find it": "أين بالضبط، وفيمَ يُستخدم، وأي شيء يساعد في العثور عليه",
-  "Where it is": "مكان الغرفة",
-  "Where it is in the close-up": "مكانه في اللقطة القريبة",
-  "Where the phone was when it scanned, within about %@ m.": "حيث كان الهاتف وقت المسح، بدقة نحو %@ م.",
-  "Where the room is, its floor and apartment are still in the panel.": "مكان الغرفة وطابقها وشقتها ما زالت في اللوحة.",
-  "white": "أبيض",
-  "White bookshelf": "رف كتب أبيض",
-  "Who can see it": "من يستطيع رؤيتها",
-  "Width (cm)": "العرض (سم)",
-  "Window": "نافذة",
-  "World": "العالم",
-  "World, Building and Apartment fly between the globe, the building and the apartment. Room opens the plan.": "تنقلك «العالم» و«المبنى» و«الشقة» بين الكرة الأرضية والمبنى والشقة. وتفتح «الغرفة» المخطط.",
-  "World, Building and Apartment fly between the globe, your building and your apartment. Room opens the plan.": "تنقلك «العالم» و«المبنى» و«الشقة» بين الكرة الأرضية ومبناك وشقتك. وتفتح «الغرفة» المخطط.",
-  "you can edit": "يمكنك التعديل",
-  "You can now change what's in this room.": "يمكنك الآن تغيير ما في هذه الغرفة.",
-  "Your building": "مبناك",
-  "Your rooms": "غرفك",
-  "Yours": "غرفك",
-  "Zoom in": "تكبير",
-  "Zoom in on the plan": "كبّر على المخطط",
-  "Zoom in to your area, then click your building": "قرّب الخريطة إلى منطقتك، ثم انقر مبناك",
-  "Zoom out": "تصغير",
-  "“%@” changed on the phone meanwhile. Showing the latest version.": "تغيّر «%@» على الهاتف في هذه الأثناء. تظهر أحدث نسخة.",
-  "“%@” was deleted on the phone.": "حُذف «%@» على الهاتف.",
-  "“%@” was moved on the phone meanwhile, so it stays where the phone put it.": "نُقل «%@» على الهاتف في هذه الأثناء، لذلك يبقى حيث وضعه الهاتف.",
-  "“%@” was pinned on the phone, so it stays where the phone put it.": "ثُبّت «%@» على الهاتف، لذلك يبقى حيث وضعه الهاتف.",
-  "‹ All rooms": "‹ كل الغرف",
-  // Events and places (the Events panel, publishing a floor, a door's code).
-  "%1$@ joined · told the way %2$@ times · recognized %3$@ times · %4$@ open reports": "انضم %1$@ · أُرشدوا إلى الطريق %2$@ مرة · تعرّفت الهواتف على الطابق %3$@ مرة · %4$@ بلاغات مفتوحة",
-  "%@ is a member now.": "أصبح %@ عضوًا الآن.",
-  "%@ is made, as a draft: publish its floors, then make it live. Its join code is %@.": "أُنشئت %@ كمسودة: انشر طوابقها ثم اجعلها فعّالة. رمز الانضمام إليها هو %@.",
-  "%@ is made. Add its members by email, then make its first event.": "أُنشئت %@. أضف أعضاءها بالبريد الإلكتروني، ثم أنشئ فعاليتها الأولى.",
-  "%@ is private again: it leaves the phones it was on at their next sync.": "عادت %@ خاصة: ستغادر الهواتف التي كانت عليها عند مزامنتها التالية.",
-  "%@ said something changed": "قال %@ إن شيئًا تغيّر",
-  "1, 2, Lobby…": "1، 2، البهو…",
-  "A code for a door": "رمز لباب",
-  "A floor of %@, mapped by its organizers. You can see everything in it; they change it.": "طابق من %@، رسمه منظّموها. يمكنك رؤية كل ما فيه؛ وهم من يغيّرونه.",
-  "A public place, in no event": "مكان عام، بلا فعالية",
-  "A public place, mapped by its organizers. You can see everything in it; they change it.": "مكان عام رسمه منظّموه. يمكنك رؤية كل ما فيه؛ وهم من يغيّرونه.",
-  "AT Conference 2027": "مؤتمر التقنيات المساعدة 2027",
-  "Add a member": "إضافة عضو",
-  "Admins only: an organization whose members map floors for its events. You become its first owner, and add its members by email.": "للمشرفين فقط: منظمة يرسم أعضاؤها الطوابق لفعالياتها. تصبح مالكها الأول، وتضيف أعضاءها بالبريد الإلكتروني.",
-  "An event floor or public place: everyone who joins the event, or opens its code, has it on their phone. The people below can also change what's in it. See below to take it back.": "طابق فعالية أو مكان عام: كل من ينضم إلى الفعالية أو يفتح رمزه يحصل عليه على هاتفه. ويمكن لمن أدناه تغيير ما فيه أيضًا. انظر أدناه لاستعادته.",
-  "An organization's members map its floors with the iPhone, publish them into an event, and everyone who joins can ask the way. To set up an organization, write to us.": "يرسم أعضاء المنظمة طوابقها بالآيفون، وينشرونها في فعالية، ويمكن لكل من ينضم أن يسأل عن الطريق. لإنشاء منظمة، راسلنا.",
-  "Anaheim Marriott": "فندق أنهايم ماريوت",
-  "At the event": "في الفعالية",
-  "Before publishing a floor, each member confirms once: the owner's OK, public areas only, no one in the frame, and that the floor, its photos and its location become public to the event's attendees.": "قبل نشر طابق، يؤكد كل عضو مرة واحدة: موافقة المالك، والمناطق العامة فقط، ولا أحد في الصورة، وأن الطابق وصوره وموقعه تصبح علنية لحاضري الفعالية.",
-  "By the %@": "عند %@",
-  "Center on Disabilities": "مركز الإعاقات",
-  "City": "المدينة",
-  "Couldn't add them: %@": "تعذّرت إضافتهم: %@",
-  "Couldn't do that: %@": "تعذّر ذلك: %@",
-  "Couldn't leave it: %@": "تعذّرت مغادرتها: %@",
-  "Couldn't list it: %@": "تعذّر إدراجه: %@",
-  "Couldn't make it: %@": "تعذّر إنشاؤها: %@",
-  "Couldn't make the event: %@": "تعذّر إنشاء الفعالية: %@",
-  "Couldn't publish it: %@": "تعذّر نشره: %@",
-  "Couldn't remove it: %@": "تعذّرت إزالته: %@",
-  "Couldn't save that: %@": "تعذّر حفظ ذلك: %@",
-  "Couldn't unpublish it: %@": "تعذّر إلغاء نشره: %@",
-  "Door code": "رمز الباب",
-  "End it": "إنهاؤها",
-  "Event": "الفعالية",
-  "Event floor": "طابق فعالية",
-  "Event floors and places": "طوابق الفعاليات والأماكن",
-  "Event floors are off in this cloud.": "طوابق الفعاليات متوقفة في هذه السحابة.",
-  "Events": "الفعاليات",
-  "Events you've joined": "الفعاليات التي انضممت إليها",
-  "Everyone who joins the event gets this room on their phone as one of its floors, with its plan, its things and its photos, and can ask the way around it without a map or the camera. Name the rooms and landmarks first (Registration, Elevators, booth names): that's what people will ask for.": "كل من ينضم إلى الفعالية يحصل على هذه الغرفة على هاتفه كأحد طوابقها، بمخططها وأشيائها وصورها، ويمكنه السؤال عن الطريق فيها دون خريطة أو كاميرا. سمِّ الغرف والمعالم أولًا (التسجيل، المصاعد، أسماء الأجنحة): فهذا ما سيسأل الناس عنه.",
-  "First, confirm how you scanned it.": "أكّد أولًا كيف مسحته.",
-  "First, confirm the place's owner agreed.": "أكّد أولًا موافقة مالك المكان.",
-  "Floor %@: %@": "الطابق %@: %@",
-  "Floors and numbers": "الطوابق والأرقام",
-  "For conferences and venues": "للمؤتمرات والأماكن",
-  "From": "من",
-  "Give the event a name.": "أعطِ الفعالية اسمًا.",
-  "Hidden: it was taken down, and isn't on anyone's phone. Publish it again from its event, or write to us.": "مخفي: أُزيل، وليس على هاتف أحد. انشره مجددًا من فعاليته، أو راسلنا.",
-  "Booth 42": "جناح 42",
-  "I confirm": "أؤكد",
-  "I scanned public areas only, with no one in the frame, and I understand the floor, its photos and its location become public to the event's attendees": "مسحت المناطق العامة فقط، دون أحد في الصورة، وأفهم أن الطابق وصوره وموقعه تصبح علنية لحاضري الفعالية",
-  "It's ended: nobody new can join it, and its floors stay as they are.": "انتهت: لا يمكن لأحد جديد الانضمام إليها، وتبقى طوابقها كما هي.",
-  "It's live: anyone with the code can join it now.": "أصبحت فعّالة: يمكن لكل من لديه الرمز الانضمام إليها الآن.",
-  "Join code to print": "رمز انضمام للطباعة",
-  "Last checked": "آخر تحقق",
-  "Last checked %@.": "آخر تحقق %@.",
-  "Leave the event": "مغادرة الفعالية",
-  "Less": "أقل",
-  "List it": "إدراجه",
-  "Listed as “%@”.": "أُدرج باسم «%@».",
-  "Listed as “%@”: people can ask for it by that name.": "مُدرج باسم «%@»: يمكن للناس طلبه بهذا الاسم.",
-  "Listed: %@": "المُدرج: %@",
-  "Loading…": "جارٍ التحميل…",
-  "Make it": "إنشاؤها",
-  "Make it live": "جعلها فعّالة",
-  "Make it live again": "جعلها فعّالة مجددًا",
-  "Make the event": "إنشاء الفعالية",
-  "New event": "فعالية جديدة",
-  "New organization": "منظمة جديدة",
-  "No confirmed account has that email yet. They make one in the app first.": "لا يوجد حساب مؤكد بهذا البريد بعد. عليهم إنشاء حساب في التطبيق أولًا.",
-  "No events yet.": "لا فعاليات بعد.",
-  "No events yet: make one under Events, at the top.": "لا فعاليات بعد: أنشئ واحدة من «الفعاليات» في الأعلى.",
-  "No floors yet: open a scanned room of yours and publish it into this event.": "لا طوابق بعد: افتح غرفة ممسوحة لك وانشرها في هذه الفعالية.",
-  "None yet. Join an event in the app with its six-letter code (Events, then Join an event); its floors then show here too, to look at.": "لا شيء بعد. انضم إلى فعالية في التطبيق برمزها المكوّن من ستة أحرف (الفعاليات، ثم انضم إلى فعالية)؛ تظهر طوابقها هنا أيضًا للاطلاع.",
-  "Only an organization's members publish floors.": "أعضاء المنظمة وحدهم ينشرون الطوابق.",
-  "Only the room's owner publishes it.": "مالك الغرفة وحده ينشرها.",
-  "Open": "فتح",
-  "Organization's name": "اسم المنظمة",
-  "Print the code": "طباعة الرمز",
-  "Public place": "مكان عام",
-  "Publish": "نشر",
-  "Publish as an event floor": "النشر كطابق فعالية",
-  "Published": "تاريخ النشر",
-  "Published as a public place.": "نُشر كمكان عام.",
-  "Published as a public place: anyone with the app who opens its code gets it on their phone, with its plan, its things and its photos.": "منشور كمكان عام: كل من لديه التطبيق ويفتح رمزه يحصل عليه على هاتفه، بمخططه وأشيائه وصوره.",
-  "Published in %@: everyone who joins it with the code %@ gets this floor on their phone, with its plan, its things and its photos, and can ask the way around it.": "منشور في %@: كل من ينضم إليها بالرمز %@ يحصل على هذا الطابق على هاتفه، بمخططه وأشيائه وصوره، ويمكنه السؤال عن الطريق فيه.",
-  "Published: everyone who joins with the code %@ has this floor.": "نُشر: كل من ينضم بالرمز %@ لديه هذا الطابق.",
-  "Publishing…": "جارٍ النشر…",
-  "Remove the listing": "إزالة الإدراج",
-  "Scan with your iPhone's camera to open this floor in Whereabouts, started from here.": "امسح الرمز بكاميرا الآيفون لتفتح هذا الطابق في Whereabouts، بدءًا من هنا.",
-  "Scan with your iPhone's camera, or open the Whereabouts app, tap Events, then Join an event, and type the code.": "امسح الرمز بكاميرا الآيفون، أو افتح تطبيق Whereabouts، ثم الفعاليات، ثم انضم إلى فعالية، واكتب الرمز.",
-  "Sign in again.": "سجّل الدخول مجددًا.",
-  "Stuck by a door, it opens this floor on a visitor's iPhone, started from that spot. Say what the code is by, as people would.": "ملصقًا عند باب، يفتح هذا الطابق على آيفون الزائر بدءًا من تلك النقطة. اذكر ما يقع الرمز عنده، كما يقوله الناس.",
-  "Thank you. You can publish floors now.": "شكرًا. يمكنك نشر الطوابق الآن.",
-  "That event has ended.": "انتهت تلك الفعالية.",
-  "That event is gone. Choose another.": "لم تعد تلك الفعالية موجودة. اختر أخرى.",
-  "The browser blocked the print page: allow pop-ups for this site and try again.": "حجب المتصفح صفحة الطباعة: اسمح بالنوافذ المنبثقة لهذا الموقع وحاول مجددًا.",
-  "The code couldn't be drawn (it needs the internet once).": "تعذّر رسم الرمز (يحتاج إلى الإنترنت مرة واحدة).",
-  "The email they sign in to Whereabouts with; the account must exist and be confirmed. Members scan floors for the organization for free and publish them into its events.": "البريد الذي يسجّلون به الدخول إلى Whereabouts؛ يجب أن يكون الحساب موجودًا ومؤكدًا. يمسح الأعضاء الطوابق للمنظمة مجانًا وينشرونها في فعالياتها.",
-  "The event has as many floors as it may hold.": "بلغت الفعالية أقصى عدد من الطوابق.",
-  "The listing is gone.": "أُزيل الإدراج.",
-  "The name attendees will ask for: a booth, a company, a desk. It's findable by that name, and the event's stats count the people walked to it.": "الاسم الذي سيطلبه الحاضرون: جناح، شركة، مكتب. يُعثر عليه بهذا الاسم، وتحصي إحصاءات الفعالية من أُرشدوا إليه.",
-  "The place's owner or operator agreed to its being mapped and shown this way": "وافق مالك المكان أو مشغّله على رسمه وعرضه بهذه الطريقة",
-  "The room's map hasn't reached the cloud yet: open the app on the phone that scanned it, with internet, and try again.": "لم تصل خريطة الغرفة إلى السحابة بعد: افتح التطبيق على الهاتف الذي مسحها، مع اتصال بالإنترنت، وحاول مجددًا.",
-  "Their email": "بريدهم الإلكتروني",
-  "This organization's plan has ended: its floors still work, but new ones can't be published. Write to us.": "انتهت خطة هذه المنظمة: طوابقها ما زالت تعمل، لكن لا يمكن نشر طوابق جديدة. راسلنا.",
-  "To": "إلى",
-  "Try again.": "حاول مجددًا.",
-  "Unpublish": "إلغاء النشر",
-  "Venue": "المكان",
-  "draft": "مسودة",
-  "ended": "منتهية",
-  "last checked %@": "آخر تحقق %@",
-  "live": "فعّالة",
-  "not checked yet": "لم يُتحقق منه بعد",
-  "the main entrance": "المدخل الرئيسي",
-};
-
-// What the phone's detector and its room scans call things (their own English
-// labels, kept with each item), in Arabic as the app says them (Glossary.labelNames).
-const LABEL_AR = {
-  "person": "شخص", "bicycle": "دراجة", "car": "سيارة", "motorcycle": "دراجة نارية", "airplane": "طائرة", "bus": "حافلة",
-  "train": "قطار", "truck": "شاحنة", "boat": "قارب", "traffic light": "إشارة مرور", "fire hydrant": "صنبور إطفاء",
-  "stop sign": "إشارة توقف", "parking meter": "عداد موقف", "bench": "مقعد طويل", "bird": "طائر", "cat": "قطة", "dog": "كلب",
-  "horse": "حصان", "sheep": "خروف", "cow": "بقرة", "elephant": "فيل", "bear": "دب", "zebra": "حمار وحشي", "giraffe": "زرافة",
-  "backpack": "حقيبة ظهر", "umbrella": "مظلة", "handbag": "حقيبة يد", "tie": "ربطة عنق", "suitcase": "حقيبة سفر",
-  "frisbee": "صحن طائر", "skis": "زلاجات", "snowboard": "لوح تزلج على الثلج", "sports ball": "كرة", "kite": "طائرة ورقية",
-  "baseball bat": "مضرب بيسبول", "baseball glove": "قفاز بيسبول", "skateboard": "لوح تزلج", "surfboard": "لوح ركوب الأمواج",
-  "tennis racket": "مضرب تنس", "bottle": "زجاجة", "wine glass": "كأس", "cup": "كوب", "fork": "شوكة", "knife": "سكين",
-  "spoon": "ملعقة", "bowl": "وعاء", "banana": "موز", "apple": "تفاحة", "sandwich": "شطيرة", "orange": "برتقالة",
-  "broccoli": "بروكلي", "carrot": "جزرة", "hot dog": "نقانق", "pizza": "بيتزا", "donut": "دونات", "cake": "كعكة", "chair": "كرسي",
-  "couch": "كنبة", "potted plant": "نبتة", "bed": "سرير", "dining table": "طاولة", "toilet": "مرحاض", "tv": "تلفزيون",
-  "laptop": "لابتوب", "mouse": "فأرة", "remote": "جهاز تحكم", "keyboard": "لوحة مفاتيح", "cell phone": "هاتف",
-  "microwave": "ميكروويف", "oven": "فرن", "toaster": "محمصة", "sink": "مغسلة", "refrigerator": "ثلاجة", "book": "كتاب",
-  "clock": "ساعة", "vase": "مزهرية", "scissors": "مقص", "teddy bear": "دبدوب", "hair drier": "مجفف شعر",
-  "toothbrush": "فرشاة أسنان", "storage": "خزانة", "stove": "موقد", "washerDryer": "غسالة أو مجفف", "bathtub": "حوض استحمام",
-  "dishwasher": "غسالة صحون", "table": "طاولة", "sofa": "كنبة", "fireplace": "مدفأة", "television": "تلفزيون", "stairs": "سلالم",
-};
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
   (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
 const nowISO = () => new Date().toISOString();
@@ -1744,11 +978,10 @@ function sharedBy(room) {
   return `${room.visibility === "public" ? tr("Public") : tr("Shared with you")} · ${room.owner_email || tr("another account")}`;
 }
 const fmtM = (v) => tr("%@ m", (Math.round(v * 100) / 100).toFixed(2));
-/** A number field: in Arabic a text field (a number field drops Arabic digits), read with `typedNumber`. */
-const numberField = (mode) => (LANG === "ar" ? `type="text" inputmode="${mode}" dir="ltr"` : `type="number" inputmode="${mode}"`);
-/** What's typed in a number field, with Arabic digits read as 0-9 and a decimal comma
- *  ("1,5", "\u0661\u066B\u0665", "1\u060C5") as ".". */
-const typedNumber = (text) => arNorm(text).replace(/[\u066B,\u060C]/g, ".").trim();
+/** A number field, read with `typedNumber`. */
+const numberField = (mode) => `type="number" inputmode="${mode}"`;
+/** What's typed in a number field, with a decimal comma ("1,5") as ".". */
+const typedNumber = (text) => String(text ?? "").replace(/,/g, ".").trim();
 /** "16 × 3.5 × 2.4 cm" from a size in meters (width, height, depth): length × width × height. */
 function fmtCm(size) {
   if (!Array.isArray(size) || size.length !== 3 || !size.every((v) => Number.isFinite(v) && v > 0)) return null;
@@ -1781,7 +1014,7 @@ function plural(name) {
   words[at] = pluralWord(words[at]);
   return words.join(" ");
 }
-const normName = (s) => arNorm(String(s || "").toLowerCase()).replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const normName = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 /** "a" or "an", by sound: "an egg slicer", "a USB charger", "an HDMI cable", "a unicorn". */
 function article(name) {
   const word = String(name).trim().split(/\s+/)[0] || "";
@@ -1801,14 +1034,6 @@ function countPhrase(names, maxGroups = 3) {
   });
   groups.sort((a, b) => b.count - a.count || a.order - b.order);
   const rest = groups.slice(maxGroups).reduce((n, g) => n + g.count, 0);
-  if (LANG === "ar") {
-    // As the phone says it: "ملعقة عدد 6، شوكة عدد 4، و5 أغراض أخرى" (عدد needs no plural).
-    const shown = groups.slice(0, maxGroups).map((g) => (g.count === 1 ? isolate(g.name) : `${isolate(g.name)} عدد ${g.count}`));
-    if (!rest) return joinList(shown);
-    const others = rest === 1 ? "غرض آخر" : rest === 2 ? "غرضين آخرين" : rest <= 10 ? `${rest} أغراض أخرى`
-      : `${countOf(rest, "thing")} ${rest % 100 >= 3 && rest % 100 <= 10 ? "أخرى" : "آخر"}`;
-    return `${shown.join("، ")}، ${arAnd(others)}`;
-  }
   const say = (g) => (g.count === 1 ? `${article(g.name)} ${g.name}` : `${g.count} ${plural(g.name)}`);
   const shown = groups.slice(0, maxGroups).map(say);
   if (rest) return `${shown.join(", ")}, and ${rest} more`;
@@ -2073,7 +1298,7 @@ async function startRemote(client, user) {
   state.client = client;
   state.user = user;
   usage.refreshToken();
-  usage.log("editor.open", null, { mode: "remote", language: LANG });
+  usage.log("editor.open", null, { mode: "remote", language: "en" });
   showAccount();
   showWorkspace();
   await loadRooms({ openOnlyRoom: true });
@@ -2085,7 +1310,7 @@ function startDemo() {
   state.client = null;
   state.user = null;
   state.rooms = sample.rooms;
-  usage.log("demo.open", null, { language: LANG, assistant: !!chatService() });
+  usage.log("demo.open", null, { language: "en", assistant: !!chatService() });
   showAccount();
   showWorkspace();
   openRoomData(sample.room, sample.items);
@@ -2170,11 +1395,15 @@ async function selectAll(build, pageSize = 1000) {
 
 async function loadRooms({ openOnlyRoom = false } = {}) {
   setStatus("saving", tr("Loading rooms…"));
+  // (Signing out while this runs: the account's client is gone, and so is the point.)
+  const client = state.client;
+  const gone = () => state.client !== client;
   // Where each room is, for the map: the phone's (in its layout) and any set here (site).
   // Yours, and the ones other accounts made public or shared with you (whose, and how).
-  const query = (columns) => state.client.from("rooms").select(columns).eq("deleted", false).order("updated_at", { ascending: false });
+  const query = (columns) => client.from("rooms").select(columns).eq("deleted", false).order("updated_at", { ascending: false });
   const basic = "id,name,scanned_at,updated_at,deleted,owner,geo:layout->geo";
   let { data: rooms, error } = await query(basic + ",site,visibility,owner_email,map_saved_at,map_saved_by");
+  if (gone()) return;
   state.siteMissing = false;
   state.sharingMissing = false;
   state.familyMissing = false;
@@ -2192,13 +1421,16 @@ async function loadRooms({ openOnlyRoom = false } = {}) {
       }
     }
   }
+  if (gone()) return;
   if (!error) await markRoomsToChange(rooms);
+  if (gone()) return;
   // Whether rooms can be made public here: not in a cloud anyone can sign up
   // to (service_settings in cloud/supabase-setup.sql). A database from before
   // that switch: as before.
   state.publicOff = false;
   if (!error && !state.sharingMissing) {
-    const { data: allowed, error: publicError } = await state.client.rpc("public_rooms_on");
+    const { data: allowed, error: publicError } = await client.rpc("public_rooms_on");
+    if (gone()) return;
     state.publicOff = !publicError && allowed === false;
   }
   if (error) {
@@ -2207,7 +1439,8 @@ async function loadRooms({ openOnlyRoom = false } = {}) {
     renderRoomList();
     return;
   }
-  const { data: counts, error: countError } = await selectAll(() => state.client.from("items").select("id,room_id,parent_id").eq("deleted", false));
+  const { data: counts, error: countError } = await selectAll(() => client.from("items").select("id,room_id,parent_id").eq("deleted", false));
+  if (gone()) return;
   if (countError) {
     // The rooms still show; why their counts don't is said up top.
     state.loadError = friendlyError(countError);
@@ -2226,6 +1459,7 @@ async function loadRooms({ openOnlyRoom = false } = {}) {
   state.rooms = rooms.map((r) => withLocalSite({ ...r, item_count: perRoom[r.id] || 0, inside_count: insideRoom[r.id] || 0 }));
   state.loadError = null;
   await Promise.all([loadAttention(), loadPlaces(state.rooms)]);
+  if (gone()) return;
   refreshStatus();
   showEventsButton();
   if (openOnlyRoom && state.rooms.length === 1) {
@@ -3149,11 +2383,11 @@ function matchesFilter(item) {
   if (state.filter === "items" && isFurniture(item)) return false;
   if (state.filter === "check" && !isLow(item)) return false;
   if (!state.query) return true;
-  // Arabic as loosely as the phone reads it, "ال" or not ("المفاتيح" finds "مفاتيح"), and kinds by either name.
-  const q = arNorm(state.query.toLowerCase());
-  const hay = arNorm([item.name, item.note, item.category, categoryName(item.category), item.detected_label, labelName(item.detected_label),
-    ...(item.contents || []).map((c) => c.name)].join(" ").toLowerCase());
-  return q.split(/\s+/).every((word) => hay.includes(word) || (word.startsWith("ال") && word.length > 3 && hay.includes(word.slice(2))));
+  // Names, notes, kinds (by either name), what the phone saw, and what's inside.
+  const q = state.query.toLowerCase();
+  const hay = [item.name, item.note, item.category, categoryName(item.category), item.detected_label,
+    ...(item.contents || []).map((c) => c.name)].join(" ").toLowerCase();
+  return q.split(/\s+/).every((word) => hay.includes(word));
 }
 /** The list: everything that isn't inside something, each container followed
  *  by its things when it's open (selected). A search, or "Check names", also
@@ -3181,14 +2415,14 @@ function describe(item) {
   if (isInside(item)) {
     const parts = [item.note, fmtCm(item.size)].filter(Boolean);
     if (isLow(item)) parts.push(tr("not sure"));
-    return parts.map(isolate).join(" · ") || tr("Found inside");
+    return parts.join(" · ") || tr("Found inside");
   }
   const parts = [tr(own(SOURCE_TEXT, item.source) || N_("Item"))];
   if (item.category && !isFurniture(item)) parts.unshift(categoryName(item.category));
   // (A home scanned room by room: which room.)
   if (item.room && (state.room?.layout?.rooms || []).length) parts.unshift(item.room);
   if (isLow(item)) parts.push(tr("not sure"));
-  return parts.map(isolate).join(" · ");
+  return parts.join(" · ");
 }
 function thumbHTML(item, size = 22) {
   const url = item.photo_path && own(state.photos, item.photo_path);
@@ -3215,7 +2449,7 @@ function renderRoomList() {
 function renderSideHead() {
   const head = $("side-head");
   if (!state.room) {
-    head.innerHTML = `<div class="eyebrow">${state.rooms.some((r) => !isMine(r)) || (state.attention || []).length ? tr("Rooms") : tr("Your rooms")}</div>`;
+    head.innerHTML = `<div class="eyebrow">${state.rooms.some(isPlace) ? tr("Rooms and Spaces") : state.rooms.some((r) => !isMine(r)) || (state.attention || []).length ? tr("Rooms") : tr("Your rooms")}</div>`;
     return;
   }
   const counts = { all: state.items.length, furniture: state.items.filter(isFurniture).length,
@@ -3248,11 +2482,12 @@ function renderList() {
     const places = state.rooms.filter((r) => isPlace(r) && !isMine(r));
     const mine = state.rooms.filter(isMine), theirs = state.rooms.filter((r) => !isMine(r) && !isPlace(r));
     const reports = state.attention || [];
+    // Spaces (the floors of events you've joined) first, then your rooms and the ones shared with you.
     list.innerHTML = (reports.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Needs attention")}</div><div class="attention">${attentionHTML(reports, true)}</div>` : "")
+      + (places.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Spaces")}</div>${places.map(card).join("")}` : "")
       + ((theirs.length || places.length) && mine.length || reports.length ? `<div class="list-heading" role="heading" aria-level="3">${theirs.length || places.length ? tr("Yours") : tr("Your rooms")}</div>` : "")
       + (mine.length ? mine.map(card).join("") : `<div class="list-empty">${tr("No rooms of your own yet. Scan a room with the iPhone app while signed in, and it appears here.")}</div>`)
-      + (theirs.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Shared with you")}</div>${theirs.map(card).join("")}` : "")
-      + (places.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Event floors and places")}</div>${places.map(card).join("")}` : "");
+      + (theirs.length ? `<div class="list-heading" role="heading" aria-level="3">${tr("Shared with you")}</div>${theirs.map(card).join("")}` : "");
     return;
   }
   list.setAttribute("aria-label", tr("Items"));
@@ -3388,7 +2623,7 @@ function buildInspector() {
   const box = boxOf(item);
   const moveHere = !ro && !!state.room.layout && !container && !box;
   const conf = item.confidence != null ? tr("%@% sure", Math.round(item.confidence * 100)) : null;
-  const seen = labelName(item.detected_label);
+  const seen = item.detected_label;
   const seenAs = item.detected_label && String(seen).toLowerCase() !== (item.name || "").toLowerCase() ? tr("seen as “%@”", esc(seen)) : null;
   const things = (item.contents || []).map((c, i) => ro
     ? `<div class="thing"><input data-thing="${esc(c.id)}" dir="auto" value="${esc(c.name)}" aria-label="${esc(tr("Thing %@", i + 1))}" readonly></div>`
@@ -3432,7 +2667,7 @@ function buildInspector() {
     <div class="facts"><dl style="margin:0;display:grid;gap:6px">
       ${item.taken_at ? `<div class="fact"><dt>${tr("Taken")}</dt><dd>${esc(fmtWhen(item.taken_at))}${ro ? "" : ` <button type="button" class="btn ghost" id="insp-put-back">${tr("It's back")}</button>`}
         <br><span class="help">${tr("Said on the phone: taken from where it's pinned. If it's there again, click It's back.")}</span></dd></div>` : ""}
-      ${conf || seenAs ? `<div class="fact"><dt>${tr("Recognized")}</dt><dd>${[conf, seenAs].filter(Boolean).join(LANG === "ar" ? "، " : ", ")} ${isLow(item) ? `<span class="badge low">${tr("check the name")}</span>` : ""}</dd></div>` : ""}
+      ${conf || seenAs ? `<div class="fact"><dt>${tr("Recognized")}</dt><dd>${[conf, seenAs].filter(Boolean).join(", ")} ${isLow(item) ? `<span class="badge low">${tr("check the name")}</span>` : ""}</dd></div>` : ""}
       ${(() => { const on = supportOf(item); return on ? `<div class="fact"><dt>${tr("On")}</dt><dd><button type="button" class="link-btn" data-select="${esc(on.id)}">${esc(on.name || tr("a place"))}</button> <span class="help">${tr("as the scan measured it")}</span></dd></div>` : ""; })()}
       ${size ? `<div class="fact"><dt>${tr("Size")}</dt><dd class="data">${container || Math.max(...size) < 0.5 ? esc(fmtCm(size) || "") : tr("%@ m", size.map((v) => v.toFixed(2)).join(" × "))}</dd></div>` : ""}
       ${pos && floor != null ? `<div class="fact"><dt>${tr("Height")}</dt><dd class="data">${tr("%@ above the floor", fmtM(Math.max(0, pos[1] - floor)))}</dd></div>` : ""}
@@ -3700,7 +2935,7 @@ async function chatSend(text) {
     const response = await fetch(`${service.url}/functions/v1/claude/${demo ? "demo" : "chat"}`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ room: demo ? null : room.id, arabic: LANG === "ar", messages: turns, context: roomContext() }),
+      body: JSON.stringify({ room: demo ? null : room.id, messages: turns, context: roomContext() }),
     });
     const body = await response.json().catch(() => null);
     outcome = response.ok && typeof body?.answer === "string" ? { answer: body.answer }
@@ -3843,8 +3078,8 @@ function renderPlan() {
       <button type="button" class="btn" id="plan-check"${plan.checking ? " disabled" : ""}>${plan.checking ? tr("Checking your account…") : tr("Paid already? Check again")}</button>
     </section>` : ""}
     ${mail ? `<section>
-      <h3>${tr("Organizations and sponsors")}</h3>
-      <p class="help">${tr("Whereabouts for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
+      <h3>${tr("Spaces for events, venues and organizations")}</h3>
+      <p class="help">${tr("Spaces for a conference or a venue (your people map its floors; everyone who comes asks their way around), Whereabouts for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
       <p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${subject}" data-write dir="ltr">${esc(mail)}</a></p>
     </section>` : ""}
     ${PRICES.donate ? `<section>
@@ -3920,7 +3155,7 @@ async function planCheck(waiting) {
 // checked, who joined and how often people were told the way; and the events
 // this account joined as an attendee), publishing a room from its panel,
 // printing a door's QR code, and listing a booth by the name people ask for.
-const events = { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, loading: false, busy: false };
+const events = { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, known: false, loading: false, busy: false };
 
 /** Whether this editor deals in events: signed in to a cloud that has them. */
 function eventsAvailable() {
@@ -3965,25 +3200,28 @@ async function loadPlaces(rooms) {
   events.orgs = orgsAnswer.error ? [] : Array.isArray(orgsAnswer.data) ? orgsAnswer.data : [];
   events.mine = mineAnswer.error ? [] : Array.isArray(mineAnswer.data) ? mineAnswer.data : [];
   events.isAdmin = !adminAnswer.error && adminAnswer.data === true;
+  events.known = true;    // (the button waits for this: what the panel shows depends on it)
 }
 
-/** The Events button: for an organization's members, admins, and anyone who joined an event. */
+/** The Spaces button: for every signed-in account once this cloud publishes floors
+ *  (members and admins run their events in it; everyone else sees what Spaces are and where to write). */
 function showEventsButton() {
-  const show = eventsAvailable() && ((events.orgs || []).length > 0 || events.isAdmin || (events.mine || []).length > 0);
+  const show = eventsAvailable() && events.known;
   $("events-button").hidden = !show;
   if (!show) eventsClose();
 }
 
-/** "Event floor · AT Conference 2027" or "Public place", for a card or a pin. */
+/** "Event floor · AT Conference 2027" or "Public space", for a card or a pin. */
 function placeBadge(room) {
   const ev = eventOf(room);
   if (ev) return `${tr("Event floor")} · ${ev.name || ev.code}`;
-  return tr("Public place");
+  return tr("Public space");
 }
 
 /** An organization's events, for the publish form and the panel (loaded once, refreshed on changes). */
 async function loadOrgEvents(orgId, { force = false } = {}) {
   if (!orgId || (events.orgEvents[orgId] && !force)) return events.orgEvents[orgId] || [];
+  if (!state.client) return [];
   const { data, error } = await state.client.rpc("events_of_org", { org: orgId });
   events.orgEvents[orgId] = error ? [] : Array.isArray(data) ? data : [];
   return events.orgEvents[orgId];
@@ -4007,7 +3245,7 @@ function placeSectionHTML(room) {
   if (isPlace(room)) {
     const hidden = place && place.status !== "published";
     return `<div class="field" id="place-section">
-      <div class="section-title"><label>${ev ? tr("Event floor") : tr("Public place")}</label></div>
+      <div class="section-title"><label>${ev ? tr("Event floor") : tr("Public space")}</label></div>
       <span class="help">${hidden ? tr("Hidden: it was taken down, and isn't on anyone's phone. Publish it again from its event, or write to us.")
         : ev ? tr("Published in %@: everyone who joins it with the code %@ gets this floor on their phone, with its plan, its things and its photos, and can ask the way around it.", esc(ev.name || ""), `<span class="ev-code" dir="ltr">${esc(ev.code || "")}</span>`)
         : tr("Published as a public place: anyone with the app who opens its code gets it on their phone, with its plan, its things and its photos.")}</span>
@@ -4179,11 +3417,14 @@ async function removeListing(id) {
 
 async function eventsRefresh() {
   if (!eventsAvailable()) return;
+  const client = state.client;
   events.loading = true;
   renderEvents();
-  const [orgs, mine] = await Promise.all([state.client.rpc("my_orgs"), state.client.rpc("my_events")]);
+  const [orgs, mine, admin] = await Promise.all([client.rpc("my_orgs"), client.rpc("my_events"), client.rpc("is_admin")]);
+  if (state.client !== client) return;    // (signed out meanwhile)
   if (!orgs.error) events.orgs = Array.isArray(orgs.data) ? orgs.data : [];
   if (!mine.error) events.mine = Array.isArray(mine.data) ? mine.data : [];
+  if (!admin.error) events.isAdmin = admin.data === true;
   await Promise.all((events.orgs || []).map((o) => loadOrgEvents(o.id, { force: true })));
   events.loading = false;
   renderEvents();
@@ -4212,7 +3453,7 @@ function eventsClose() {
 /** Signed out: nothing of the account's left here. */
 function eventsForget() {
   eventsClose();
-  Object.assign(events, { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, loading: false, busy: false });
+  Object.assign(events, { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, known: false, loading: false, busy: false });
 }
 
 const EVENT_STATUS = { draft: N_("draft"), live: N_("live"), ended: N_("ended") };
@@ -4282,15 +3523,15 @@ function renderEvents() {
   }
   if (!orgs.length && !events.isAdmin) {
     const mail = String(PRICES.organizations || "").trim();
-    parts.push(`<section><h3>${tr("For conferences and venues")}</h3>
-      <p class="help">${tr("An organization's members map its floors with the iPhone, publish them into an event, and everyone who joins can ask the way. To set up an organization, write to us.")}</p>
+    parts.push(`<section><h3>${tr("Spaces: for conferences and venues")}</h3>
+      <p class="help">${tr("An organization's members map a venue's floors with the iPhone and publish them into an event; everyone who joins with its code asks their way around, in words, with no camera. To set up an organization, write to us.")}</p>
       ${mail ? `<p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${encodeURIComponent("Whereabouts for an event")}" dir="ltr" data-write-events>${esc(mail)}</a></p>` : ""}</section>`);
   }
   parts.push(`<section><h3>${tr("Events you've joined")}</h3>
     ${mine.length ? `<ul class="ev-list">${mine.map((e) => `<li><div class="ev-row"><strong>${esc(e.name)}</strong><span class="ev-code" dir="ltr">${esc(e.code)}</span></div>
         <span class="help">${esc([e.venue, e.city].filter(Boolean).join(", "))}${e.places != null ? (e.venue || e.city ? " · " : "") + esc(countOf(Number(e.places) || 0, "floor")) : ""}</span>
         <div class="ev-row"><button type="button" class="btn ghost" data-leave-event="${esc(e.code)}">${tr("Leave the event")}</button></div></li>`).join("")}</ul>`
-      : `<p class="help">${tr("None yet. Join an event in the app with its six-letter code (Events, then Join an event); its floors then show here too, to look at.")}</p>`}</section>`);
+      : `<p class="help">${tr("None yet. Join an event in the app with its six-letter code (Spaces, then Join an event); its floors then show here too, to look at.")}</p>`}</section>`);
   body.innerHTML = parts.join("");
 }
 
@@ -4370,8 +3611,7 @@ async function eventsClick(e) {
   if (evQR) {
     usage.log("event.qr");
     qrPrint({ title: evQR.dataset.name, big: evQR.dataset.code, link: eventLink(evQR.dataset.code),
-      caption: tr("Scan with your iPhone's camera, or open the Whereabouts app, tap Events, then Join an event, and type the code."),
-      captionAr: "امسح الرمز بكاميرا الآيفون، أو افتح تطبيق Whereabouts، ثم الفعاليات، ثم انضم إلى فعالية، واكتب الرمز." });
+      caption: tr("Scan with your iPhone's camera, or open the Whereabouts app, tap Spaces, then Join an event, and type the code.") });
     return;
   }
   const door = t.closest("[data-door-qr]");
@@ -4394,12 +3634,11 @@ async function eventsClick(e) {
 function doorQR(roomId, name, landmark) {
   usage.log("place.qr", null, { landmark: !!landmark });
   qrPrint({ title: name || tr("Floor"), big: landmark ? tr("By the %@", landmark) : "", link: placeLink(roomId, landmark),
-    caption: tr("Scan with your iPhone's camera to open this floor in Whereabouts, started from here."),
-    captionAr: "امسح الرمز بكاميرا الآيفون لتفتح هذا الطابق في Whereabouts، بدءًا من هنا." });
+    caption: tr("Scan with your iPhone's camera to open this floor in Whereabouts, started from here.") });
 }
 
-/** Prints a QR code (a page of its own, with the words around it in both languages). */
-async function qrPrint({ title, big, link, caption, captionAr }) {
+/** Prints a QR code (a page of its own, with the words around it). */
+async function qrPrint({ title, big, link, caption }) {
   let maker = window.qrcode;
   if (!maker) {
     try {
@@ -4420,8 +3659,8 @@ async function qrPrint({ title, big, link, caption, captionAr }) {
   const page = window.open("", "_blank");
   if (!page) { flash(tr("The browser blocked the print page: allow pop-ups for this site and try again.")); return; }
   page.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>
-    <style>body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:32px;text-align:center;color:#111}h1{font-size:28px;margin:0 0 6px}.big{font-size:40px;letter-spacing:.14em;font-weight:800;margin:8px 0 16px;font-family:ui-monospace,Menlo,monospace}svg{width:min(70vw,420px);height:auto}p{font-size:18px;max-width:34em;margin:14px auto 0;line-height:1.4}.ar{direction:rtl;font-size:19px}.link{font-size:13px;color:#666;word-break:break-all}.brand{margin-top:22px;font-weight:700;letter-spacing:.02em}@media print{body{padding:12mm}}</style></head>
-    <body><h1>${esc(title)}</h1>${big ? `<div class="big">${esc(big)}</div>` : ""}${svg}<p>${esc(caption)}</p><p class="ar">${esc(captionAr)}</p><p class="link">${esc(link)}</p><div class="brand">Whereabouts</div>
+    <style>body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:32px;text-align:center;color:#111}h1{font-size:28px;margin:0 0 6px}.big{font-size:40px;letter-spacing:.14em;font-weight:800;margin:8px 0 16px;font-family:ui-monospace,Menlo,monospace}svg{width:min(70vw,420px);height:auto}p{font-size:18px;max-width:34em;margin:14px auto 0;line-height:1.4}.link{font-size:13px;color:#666;word-break:break-all}.brand{margin-top:22px;font-weight:700;letter-spacing:.02em}@media print{body{padding:12mm}}</style></head>
+    <body><h1>${esc(title)}</h1>${big ? `<div class="big">${esc(big)}</div>` : ""}${svg}<p>${esc(caption)}</p><p class="link">${esc(link)}</p><div class="brand">Whereabouts</div>
     <script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
   page.document.close();
 }
@@ -4611,7 +3850,7 @@ const planView = {
       const pts = (r.outline || []).filter((p) => p.length >= 2).map(([x, z]) => P(x, z));
       if (pts.length < 3 || !r.name) return;
       const [cx, cz] = roomNameSpot(pts, footprints, dots);
-      const text = this.el("text", { x: cx, y: cz, "font-size": roomFont, "text-anchor": "middle", "dominant-baseline": "central", class: "plan-room-name" + (ARABIC_LETTER.test(r.name) ? " cursive" : "") }, svg);
+      const text = this.el("text", { x: cx, y: cz, "font-size": roomFont, "text-anchor": "middle", "dominant-baseline": "central", class: "plan-room-name" }, svg);
       text.textContent = r.name;
       const w = r.name.length * roomFont * 0.68 + roomFont, h = roomFont * 1.5;
       roomRects.push({ x: cx - w / 2, y: cz - h / 2, w, h });
@@ -4835,14 +4074,14 @@ const FURNITURE_HEIGHT = { storage: 0.9, refrigerator: 1.8, stove: 0.9, bed: 0.5
   bathtub: 0.55, oven: 0.9, dishwasher: 0.85, table: 0.75, sofa: 0.85, chair: 0.9, fireplace: 1.1, television: 0.6, stairs: 2.5 };
 const SURFACE_TEXT = { wall: N_("Wall"), door: N_("Door"), opening: N_("Doorway"), window: N_("Window") };
 
-/** A piece of furniture's name, by its kind ("Table", "طاولة"). */
+/** A piece of furniture's name, by its kind ("Table"). */
 function furnitureName(category) {
-  return LANG === "ar" ? labelName(category) : own(FURNITURE_NAMES, category) || categoryName(category);
+  return own(FURNITURE_NAMES, category) || categoryName(category);
 }
-/** Whether a name is the one a kind of furniture is given, in either language. */
+/** Whether a name is the one a kind of furniture is given. */
 function isFurnitureName(name, category) {
   const n = normName(name);
-  return !!n && [own(FURNITURE_NAMES, category), own(LABEL_AR, category), category].some((d) => d && normName(d) === n);
+  return !!n && [own(FURNITURE_NAMES, category), category].some((d) => d && normName(d) === n);
 }
 
 // Points in the room seen from above are [x, z], in meters.
@@ -6669,8 +5908,8 @@ const mapView = {
       centerClampedToGround: false,
     });
     this.nav = new maplibregl.NavigationControl({ visualizePitch: true });
-    // (Across from the level buttons, which start on the reading side.)
-    map.addControl(this.nav, LANG === "ar" ? "top-left" : "top-right");
+    // (Across from the level buttons, on the left.)
+    map.addControl(this.nav, "top-right");
     map.on("style.load", () => this.styleLoaded());
     map.on("error", (e) => {
       // A missing tile is no reason to give up; a map that never loads is.
@@ -6679,27 +5918,10 @@ const mapView = {
     map.on("click", (e) => this.clicked(e));
     map.on("idle", () => { if (this.mode === "room" && this.level !== "world" && !this.building) this.findBuilding(); });
     this.map = map;
-    this.localizeControls();
     if (!this.themeWatched) {
       this.themeWatched = true;
       matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.retheme());
     }
-  },
-
-  /** The map's own buttons in the editor's language (MapLibre names them in
-   *  English, once), the zoom and compass across from the level buttons. */
-  localizeControls() {
-    const map = this.map;
-    if (!map) return;
-    const corner = LANG === "ar" ? "top-left" : "top-right";
-    if (this.nav && this.navCorner && this.navCorner !== corner) { map.removeControl(this.nav); map.addControl(this.nav, corner); }
-    this.navCorner = corner;
-    const box = map.getContainer();
-    for (const [selector, english] of [[".maplibregl-ctrl-zoom-in", N_("Zoom in")], [".maplibregl-ctrl-zoom-out", N_("Zoom out")],
-      [".maplibregl-ctrl-compass", N_("Drag to rotate map, click to reset north")], [".maplibregl-ctrl-attrib-button", N_("Toggle attribution")]]) {
-      box.querySelectorAll(selector).forEach((button) => { button.title = tr(english); button.setAttribute("aria-label", tr(english)); });
-    }
-    box.querySelector(".maplibregl-canvas")?.setAttribute("aria-label", tr("Map"));
   },
 
   retheme() {
@@ -7183,7 +6405,7 @@ const mapView = {
   /** The pin on the globe, at the world level. */
   markRoom(placement) {
     const at = placement && this.level === "world" ? this.roomCenter(state.room, placement) : null;
-    const key = at ? `${LANG}|room|${state.room.id}|${state.room.name}|${at.join(",")}` : "none";
+    const key = at ? `room|${state.room.id}|${state.room.name}|${at.join(",")}` : "none";
     if (key === this.pinKey) return;
     this.clearMarkers();
     this.pinKey = key;
@@ -7219,7 +6441,7 @@ const mapView = {
   renderOverview() {
     const located = state.rooms.map((r) => ({ room: r, placement: placementOf(r) })).filter((x) => x.placement);
     ["va-accuracy", "va-highlight", "va-apartment", "va-cutaway"].forEach((id) => this.setShapes(id, []));
-    const pins = LANG + "|overview|" + located.map((x) => `${x.room.id}|${x.room.name}|${x.placement.origin.join(",")}`).join(";");
+    const pins = "overview|" + located.map((x) => `${x.room.id}|${x.room.name}|${x.placement.origin.join(",")}`).join(";");
     if (pins !== this.pinKey) {
       this.clearMarkers();
       this.pinKey = pins;
@@ -7264,7 +6486,7 @@ const mapView = {
     if (unit) where.push(tr("Apartment %@", unit));
     let text;
     if (!placement) text = tr("This room has no place on the map yet. Click “Pick the building” in the panel, then click your building.");
-    else if (this.level === "world") text = `${isolate(room.name || tr("This room"))} · ${leftToRight(GEO.fmt(this.roomCenter(room, placement)))}`;
+    else if (this.level === "world") text = `${room.name || tr("This room")} · ${GEO.fmt(this.roomCenter(room, placement))}`;
     else if (this.level === "building") {
       const whose = canEdit() ? tr("Your building") : tr("The building");
       text = this.building
@@ -7274,7 +6496,7 @@ const mapView = {
         : tr("No building outline here on the map. The circle is where the phone was (within about %@ m).", Math.round(placement.accuracy || 15));
       if (this.building && where.length) text += ` · ${where.join(" · ")}`;
     } else {
-      text = [...(where.length ? where : [tr("Floor not set: shown on the ground floor")]), isolate(room.name || tr("This room"))].join(" · ");
+      text = [...(where.length ? where : [tr("Floor not set: shown on the ground floor")]), room.name || tr("This room")].join(" · ");
       if (!this.building) text += " · " + tr("no building outline here");
     }
     caption.textContent = text;
@@ -7291,7 +6513,7 @@ const mapView = {
     const lock = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="6" width="9" height="6.5" rx="1.5"/><path d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6"/></svg>`;
     const globe = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><path d="M1.5 7h11M7 1.5c1.8 1.6 2.6 3.4 2.6 5.5S8.8 10.9 7 12.5C5.2 10.9 4.4 9.1 4.4 7S5.2 3.1 7 1.5"/></svg>`;
     const off = !!state.publicOff && !pub;
-    const key = `${LANG}|${room.id}|${mine}|${pub}|${off}|${room.owner_email || ""}`;
+    const key = `${room.id}|${mine}|${pub}|${off}|${room.owner_email || ""}`;
     if (key === el.dataset.key) return;
     el.dataset.key = key;
     el.className = "map-visibility" + (pub ? " public" : "") + (mine ? "" : " theirs");
@@ -7956,8 +7178,7 @@ function locateMe() {
 
 /** "30.0444, 31.2357" (or with ° and N/E) as [lng, lat], or null. */
 function parseCoordinates(text) {
-  const typed = arNorm(text).replace(/[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "").replace(/\u066B/g, ".")
-    .replace(/[\u060C\u061B]/g, ",").trim();
+  const typed = String(text ?? "").replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "").trim();
   const m = typed.match(/^(-?\d+(?:\.\d+)?)\s*°?\s*([NS])?\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*°?\s*([EW])?$/i);
   if (!m) return null;
   let lat = parseFloat(m[1]), lng = parseFloat(m[3]);
@@ -8020,7 +7241,6 @@ function setPlacing(placing) {
 function wireEvents() {
   $("signin-form").addEventListener("submit", signIn);
   $("demo-button").addEventListener("click", startDemo);
-  document.querySelectorAll("[data-lang-switch]").forEach((button) => button.addEventListener("click", () => setLanguage(LANG === "ar" ? "en" : "ar")));
   $("sign-out").addEventListener("click", () => {
     // (In the app, the button closes the editor: what's unsaved goes first, and the app stays signed in.)
     if (host.on && state.mode === "remote") { flushSaves().then(() => usage.flush()).then(() => host.post({ type: "close" })); return; }
@@ -8328,7 +7548,7 @@ function addThing() {
   const item = selectedItem();
   const input = $("insp-new-thing");
   if (!item || !input || !canChange()) return;
-  const names = input.value.split(/[,،؛]/).map((s) => s.trim()).filter(Boolean);
+  const names = input.value.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
   if (!names.length) return;
   const contents = [...(item.contents || []).map((c) => ({ ...c })), ...names.map((name) => ({ id: uuid().toUpperCase(), name, note: "", status: "stored" }))];
   queueItemSave(item, { contents });
@@ -8338,7 +7558,6 @@ function addThing() {
 
 // ----- Start -----
 async function boot() {
-  applyLanguage();
   wireEvents();
   setupPlanInput();
   const service = SERVICE.url && SERVICE.key;

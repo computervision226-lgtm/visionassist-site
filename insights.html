@@ -137,7 +137,7 @@
     <h2>Money</h2>
     <div class="tiles" id="tiles-money"></div>
 
-    <h2>Events and places</h2>
+    <h2>Spaces: events and places</h2>
     <p class="muted">Organizations, their events and the floors they published; who joined, how often people were told the way, and what the floor scans cost the service (<code>service_settings</code>: <code>places_on</code>, <code>place_scans_per_month</code> and the rest).</p>
     <div class="tiles" id="tiles-places"></div>
     <div class="wrap"><table id="events-table"></table></div>
@@ -203,7 +203,7 @@
   // Every event, and what it means (the app, editor and site send these names).
   var CATALOG = {
     "app.open": "The app was opened or came back to the front: version, language, whether VoiceOver is on.",
-    "screen.home": "The home screen (the list of rooms) was shown.",
+    "screen.home": "The home screen was shown.", "home.tab": "Spaces or Rooms was chosen on the home screen (tab).",
     "screen.scan": "The scanning screen was opened.", "screen.use": "Find was opened.", "screen.contribute": "Add by hand was opened.",
     "screen.settings": "Settings was opened.", "screen.plus": "The Rooms and Plus screen was opened.", "screen.account": "The account screen was opened.",
     "account.signup": "An account was created (ok: signed in at once; not ok: the email must be confirmed first, or it failed: error).",
@@ -228,7 +228,7 @@
     "use.took": "They said they took it, or put it somewhere (action).", "use.label": "A label was read (ok: legible).",
     "use.where": "Where am I.", "use.door": "Take me to the door, or another room.",
     "use.command": "A spoken command: ok when understood (kind), not when it wasn't (text: what was said).",
-    "use.report": "Something reported to the family (kind).",
+    "use.report": "Something reported to whoever keeps the room (kind).",
     "contribute.pinned": "A place was added by hand.",
     "contribute.rescan_looked": "Scan this spot again: Claude looked (found, added, moved, seen).",
     "contribute.rescan": "Scan this spot again was saved (added, moved), or not taken (why: person).",
@@ -445,7 +445,7 @@
       var key = (r.demo ? "visitor:" + (r.visitor || "?") : "person:" + (r.person || r.email || "?")) + "|" + (r.room || "");
       var t = open[key], at = new Date(r.at).getTime();
       if (!t || (r.turn != null && t.lastTurn != null && r.turn <= t.lastTurn) || at - t.lastAt > 2 * 3600 * 1000) {
-        t = open[key] = { who: r.demo ? "visitor " + (r.visitor || "") : (r.email || r.person || "account gone"), demo: !!r.demo, room: r.room_name || (r.demo ? "the sample room" : (r.room ? "a room since deleted" : "no room")), arabic: !!r.arabic, rows: [], firstAt: at };
+        t = open[key] = { who: r.demo ? "visitor " + (r.visitor || "") : (r.email || r.person || "account gone"), demo: !!r.demo, room: r.room_name || (r.demo ? "the sample room" : (r.room ? "a room since deleted" : "no room")), rows: [], firstAt: at };
         list.push(t);
       }
       t.rows.push(r); t.lastAt = at; t.lastTurn = r.turn;
@@ -460,7 +460,7 @@
       var first = t.rows[0], last = t.rows[t.rows.length - 1];
       var tin = 0, tout = 0; t.rows.forEach(function (r) { tin += Number(r.tokens_in) || 0; tout += Number(r.tokens_out) || 0; });
       return '<div class="session-head">' + esc(t.who) + ' · ' + esc(t.room) + ' · ' + esc(when(first.at)) + (t.rows.length > 1 ? ' → ' + esc(new Date(last.at).toLocaleTimeString(undefined, { timeStyle: "short" })) : "")
-        + ' <span class="muted">(' + t.rows.length + (t.rows.length === 1 ? " question" : " questions") + (t.arabic ? ", Arabic" : "") + (tin || tout ? ", " + n(tin) + " tokens read, " + n(tout) + " written" : "") + ')</span></div>'
+        + ' <span class="muted">(' + t.rows.length + (t.rows.length === 1 ? " question" : " questions") + (tin || tout ? ", " + n(tin) + " tokens read, " + n(tout) + " written" : "") + ')</span></div>'
         + '<div class="talk">' + t.rows.map(function (r) {
           var answered = r.status === 200 && r.answer;
           var why = REFUSED[r.reason] || (r.reason ? esc(r.reason) : "no answer (status " + esc(r.status) + ")");
