@@ -1248,7 +1248,7 @@ function sampleVenueData() {
     furn("registration", "table", 7.0, 4.6, 3.0, 0.9, 0.9),
     furn("information", "table", 11.2, 2.4, 1.8, 0.9, 0.8),
     furn("coffee", "table", 1.3, 9.6, 2.0, 0.9, 0.7, Math.PI / 2),
-    furn("charging", "table", 12.6, 1.8, 1.2, 0.75, 0.6),
+    furn("charging", "table", 13.6, 3.0, 1.2, 0.75, 0.6, Math.PI / 2),
     furn("lobby-sofa-1", "sofa", 10.6, 9.4, 2.0, 0.85, 0.9), furn("lobby-sofa-2", "sofa", 10.6, 11.0, 2.0, 0.85, 0.9, Math.PI),
     furn("lobby-table", "table", 8.2, 10.2, 0.8, 0.45, 0.8),
     furn("lectern-203", "table", 19.0, 0.9, 0.6, 1.15, 0.5), furn("row-203a", "chair", 19.3, 2.3, 6.5, 0.85, 0.5), furn("row-203b", "chair", 19.3, 3.5, 6.5, 0.85, 0.5),
@@ -1280,9 +1280,12 @@ function sampleVenueData() {
     detected_label: null, confidence: 0.85, position: null, size: null, yaw: null, placement: "lidar", contents: [], photo_path: null,
     deleted: false, updated_at: t(26) }, extra);
   // RoomPlan's furniture, renamed by the organizers; the lobby's desks say what they're for.
+  // Each has the scan's photo of it (sample/venue/<id>.jpg beside the editor:
+  // renders of this floor, made from this plan); the landmarks, pinned on the
+  // plan by hand, have none, as on a real account.
   const piece = (key, name, room, x, y, z, w, h, d, rot = 0, extra = {}) => item(key, name, room, Object.assign({ source: "roomPlan",
     detected_label: furniture.find((f) => f.id === key)?.category || "table", category: "furniture", confidence: 0.93,
-    position: pos(x, y, z), size: [w, h, d], yaw: turn + rot }, extra));
+    position: pos(x, y, z), size: [w, h, d], yaw: turn + rot, photo_path: `sample/venue/${key}.jpg` }, extra));
   // A landmark pinned on the plan by the organizers (RoomPlan has no category for it).
   const landmark = (key, name, room, x, y, z, note = "", extra = {}) => item(key, name, room, Object.assign({ source: "web", category: "fixture",
     confidence: null, position: pos(x, y, z), placement: "plan", plan_scanned_at: "2026-10-20T15:05:00Z", note, updated_at: t(20) }, extra));
@@ -1291,7 +1294,7 @@ function sampleVenueData() {
     piece("registration", tr("Registration desk"), lobby, 7.0, 0.45, 4.6, 3.0, 0.9, 0.9, 0, { note: tr("badges and the printed program; ask here for a sighted guide") }),
     piece("information", tr("Information desk"), lobby, 11.2, 0.45, 2.4, 1.8, 0.9, 0.8, 0, { note: tr("lost and found; large-print maps") }),
     piece("coffee", tr("Coffee station"), lobby, 1.3, 0.45, 9.6, 2.0, 0.9, 0.7, Math.PI / 2, { note: tr("coffee, tea and water, 8 to 4; cups on the left, lids on the right") }),
-    piece("charging", tr("Charging table"), lobby, 12.6, 0.38, 1.8, 1.2, 0.75, 0.6, 0, { note: tr("USB-C and Lightning cables, accessible height") }),
+    piece("charging", tr("Charging table"), lobby, 13.6, 0.38, 3.0, 1.2, 0.75, 0.6, Math.PI / 2, { note: tr("USB-C and Lightning cables, accessible height") }),
     piece("lobby-sofa-1", tr("Lobby sofa"), lobby, 10.6, 0.43, 9.4, 2.0, 0.85, 0.9),
     piece("lobby-sofa-2", tr("Lobby sofa"), lobby, 10.6, 0.43, 11.0, 2.0, 0.85, 0.9, Math.PI),
     piece("lobby-table", tr("Low table"), lobby, 8.2, 0.23, 10.2, 0.8, 0.45, 0.8),
@@ -1318,7 +1321,7 @@ function sampleVenueData() {
     piece("quiet-sofa", tr("Sofa"), quiet, 36.5, 0.43, 2.6, 2.0, 0.85, 0.9),
     piece("quiet-chair", tr("Armchair"), quiet, 38.6, 0.45, 1.4, 0.8, 0.9, 0.8, -0.5),
     piece("hall-help", tr("Hall help desk"), hall, 22.0, 0.45, 9.6, 1.8, 0.9, 0.8, 0, { note: tr("a volunteer here walks you to any booth") }),
-    piece("booth-40", tr("Booth 40"), hall, 18.0, 0.38, 12.0, 1.8, 0.75, 0.8, 0, { note: tr("first on the left from the entrance") }),
+    piece("booth-40", tr("Booth 40"), hall, 18.0, 0.38, 12.0, 1.8, 0.75, 0.8, 0, { note: tr("first on the right from the entrance") }),
     piece("booth-41", tr("Booth 41"), hall, 18.0, 0.38, 17.0, 1.8, 0.75, 0.8),
     piece("booth-42", tr("Booth 42: Acme Readers"), hall, 26.0, 0.38, 12.0, 1.8, 0.75, 0.8, 0, { note: tr("braille displays to try; staff can guide you from the hall entrance") }),
     piece("booth-43", tr("Booth 43"), hall, 26.0, 0.38, 17.0, 1.8, 0.75, 0.8),
