@@ -3271,7 +3271,7 @@ function renderPlan() {
     </section>` : ""}
     ${mail ? `<section>
       <h3>${tr("Events, venues and organizations")}</h3>
-      <p class="help">${tr("Whereabouts for a conference or a venue (your people map its floors; everyone who comes asks their way around), for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
+      <p class="help">${tr("Whereabouts for a conference or a venue, priced per event (your people map its floors the morning it opens; everyone who comes asks their way around, with no Wi-Fi), for an organization's clients (a rehabilitation agency, a care home), or Plus sponsored for someone who can't pay for it: write to us for pricing.")}</p>
       <p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${subject}" data-write dir="ltr">${esc(mail)}</a></p>
     </section>` : ""}
     ${PRICES.donate ? `<section>
@@ -3717,7 +3717,7 @@ function renderEvents() {
   if (!orgs.length && !events.isAdmin) {
     const mail = String(PRICES.organizations || "").trim();
     parts.push(`<section><h3>${tr("Venues: for conferences and events")}</h3>
-      <p class="help">${tr("An organization's members map a venue's floors with the iPhone and publish them into an event; everyone who joins with its code asks their way around, in words, with no camera. To set up an organization, write to us.")}</p>
+      <p class="help">${tr("Map the event, not just the building: on move-in morning, an organization's members walk each floor with an iPhone Pro and publish it into the event, and it reaches everyone who has joined with its code, even those who joined last week. They ask their way around in words, with no Wi-Fi and nothing to hold up. Priced per event. To set up an organization, write to us.")}</p>
       ${mail ? `<p><a class="plan-mail" href="mailto:${esc(mail)}?subject=${encodeURIComponent("Whereabouts for an event")}" dir="ltr" data-write-events>${esc(mail)}</a></p>` : ""}</section>`);
   }
   parts.push(`<section><h3>${tr("Events you've joined")}</h3>
