@@ -589,7 +589,7 @@ button { cursor: pointer; }
     <div class="notice error" id="signin-error" role="alert" hidden></div>
     <button class="btn primary" type="submit" id="signin-button">Sign in</button>
     <div class="divider">or</div>
-    <button class="btn" type="button" id="demo-button">Explore a sample room</button>
+    <button class="btn" type="button" id="demo-button">Explore a sample venue and room</button>
   </form>
 </section>
 
@@ -967,7 +967,7 @@ const nowISO = () => new Date().toISOString();
 // The phone writes IDs in capitals inside the layout; the database returns them in lower case.
 const idKey = (id) => String(id ?? "").toLowerCase();
 // Rooms other accounts made public or shared show here too, to look at, not change.
-const isMine = (room) => !room || state.mode !== "remote" || !room.owner || idKey(room.owner) === idKey(state.user?.id);
+const isMine = (room) => !room || (state.mode !== "remote" && !room.sample_theirs) || !room.owner || idKey(room.owner) === idKey(state.user?.id);
 /** The room itself (its name, who sees it, where it is): its owner's to change. */
 const canEdit = () => isMine(state.room);
 /** What's in a room: its owner's, and the people it's shared with to change it. */
@@ -975,6 +975,7 @@ const canChangeItems = (room) => isMine(room) || !!room?.can_edit;
 const canChange = () => canChangeItems(state.room);
 /** "Shared with you" or "Public", and whose, for a room another account shares. */
 function sharedBy(room) {
+  if (isPlace(room)) return placeBadge(room);
   return `${room.visibility === "public" ? tr("Public") : tr("Shared with you")} · ${room.owner_email || tr("another account")}`;
 }
 const fmtM = (v) => tr("%@ m", (Math.round(v * 100) / 100).toFixed(2));
@@ -1054,7 +1055,7 @@ const ICONS = {
 };
 const icon = (category, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${own(ICONS, category) || ICONS.other}</svg>`;
 
-// ----- Sample room (used by "Explore a sample room" and when no account is set up) -----
+// ----- Sample room (one of the two samples: "Explore a sample venue and room", #sample, #venue) -----
 function sampleData() {
   const yawMat = (yaw, x, y, z) => {
     const c = Math.cos(yaw), s = Math.sin(yaw);
@@ -1161,6 +1162,174 @@ function sampleData() {
   return { rooms: [{ ...room, item_count: items.length - inside, inside_count: inside }], room, items };
 }
 
+// ----- Sample venue: a conference center's floor, as an organization's members would map it for an event -----
+// Lobby (elevators, registration, coffee, restrooms), a corridor, two meeting
+// rooms, a quiet room and an exhibit hall with booths. Everything RoomPlan
+// sees is furniture; the landmarks it has no category for (the elevators,
+// the doors by name, the water fountain) are pinned on the plan by hand, as
+// organizers do. Read-only in the sample: it is "the organizers' floor".
+const SAMPLE_VENUE_ID = "sample-venue";
+const SAMPLE_EVENT = { id: "sample-event", code: "SAMPLE", name: "AT Forum 2027 (sample)", status: "live", floor: "2" };
+function sampleVenueData() {
+  const yawMat = (yaw, x, y, z) => {
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    return [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, x, y, z, 1];
+  };
+  const turn = 0.11; // the scan began at a slight angle, as real scans do
+  const at = (x, z) => [x * Math.cos(turn) + z * Math.sin(turn), x * -Math.sin(turn) + z * Math.cos(turn)];
+  let n = 0;
+  const id = (prefix) => `${prefix}-${++n}`;
+  const wall = (x1, z1, x2, z2, kind = "wall", y = 1.5, h = 3.0, extra = {}) => {
+    const [ax, az] = at(x1, z1), [bx, bz] = at(x2, z2);
+    return Object.assign({ id: id(kind), kind, transform: yawMat(-Math.atan2(bz - az, bx - ax), (ax + bx) / 2, y, (az + bz) / 2),
+      dimensions: [Math.hypot(bx - ax, bz - az), h, 0] }, extra);
+  };
+  const door = (x1, z1, x2, z2, extra = {}) => wall(x1, z1, x2, z2, "door", 1.05, 2.1, extra);
+  const opening = (x1, z1, x2, z2) => wall(x1, z1, x2, z2, "opening", 1.2, 2.4);
+  const floor = (x1, z1, x2, z2) => {
+    const [cx, cz] = at((x1 + x2) / 2, (z1 + z2) / 2);
+    return { id: id("floor"), kind: "floor", transform: [1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, cx, 0, cz, 1], dimensions: [x2 - x1, z2 - z1, 0],
+      corners: [[x1, z1], [x2, z1], [x2, z2], [x1, z2]].map(([x, z]) => { const [px, pz] = at(x, z); return [px - cx, -(pz - cz), 0]; }) };
+  };
+  const outline = (x1, z1, x2, z2) => [[x1, z1], [x2, z1], [x2, z2], [x1, z2]].map(([x, z]) => at(x, z));
+  // A room's walls, with gaps where its doors and openings are: [side, from, to] along that side (x along north/south, z along east/west).
+  const box = (x1, z1, x2, z2, gaps = []) => {
+    const out = [];
+    const side = (name, a, b, make) => {
+      let from = a;
+      gaps.filter((g) => g[0] === name).sort((g, h) => g[1] - h[1]).forEach(([, g1, g2]) => { if (g1 > from) out.push(make(from, g1)); from = g2; });
+      if (from < b) out.push(make(from, b));
+    };
+    side("n", x1, x2, (a, b) => wall(a, z1, b, z1));
+    side("s", x1, x2, (a, b) => wall(a, z2, b, z2));
+    side("w", z1, z2, (a, b) => wall(x1, a, x1, b));
+    side("e", z1, z2, (a, b) => wall(x2, a, x2, b));
+    return out;
+  };
+  const surfaces = [
+    // The lobby: elevators on the north wall, the entrance on the west, restrooms on the south, the corridor to the east.
+    ...box(0, 0, 14, 12, [["n", 3, 4.1], ["n", 4.6, 5.7], ["n", 6.2, 7.3], ["w", 5, 7], ["s", 2, 2.9], ["s", 4, 4.9], ["s", 6, 7], ["e", 4.5, 7.5]]),
+    door(3, 0, 4.1, 0, { isOpen: false }), door(4.6, 0, 5.7, 0, { isOpen: false }), door(6.2, 0, 7.3, 0, { isOpen: false }),
+    door(0, 5, 0, 7, { isOpen: true }),
+    door(2, 12, 2.9, 12, { isOpen: false }), door(4, 12, 4.9, 12, { isOpen: false }), door(6, 12, 7, 12, { isOpen: false }),
+    opening(14, 4.5, 14, 7.5),
+    // The corridor: the rooms' south walls are its north wall, the hall's north wall its south wall; an exit at its east end.
+    ...box(14, 4.5, 40, 7.5, [["w", 4.5, 7.5], ["n", 14, 40], ["s", 14, 40], ["e", 5.5, 6.5]]),
+    wall(14, 4.5, 15, 4.5), wall(23, 4.5, 24, 4.5), wall(32, 4.5, 33, 4.5),
+    door(18, 4.5, 19, 4.5, { isOpen: true }), door(26, 4.5, 27, 4.5, { isOpen: true }), door(35, 4.5, 36, 4.5, { isOpen: false }),
+    opening(20, 7.5, 24, 7.5), door(40, 5.5, 40, 6.5, { isOpen: false }),
+    // Room 203, Room 204, the quiet room, each with its door onto the corridor.
+    ...box(15, 0, 23, 4.5, [["s", 18, 19]]),
+    ...box(24, 0, 32, 4.5, [["s", 26, 27]]),
+    ...box(33, 0, 40, 4.5, [["s", 35, 36]]),
+    // Exhibit Hall B (the lobby's east wall is its west wall down to z 12).
+    ...box(14, 7.5, 40, 24, [["n", 20, 24], ["w", 7.5, 12]]),
+    floor(0, 0, 14, 12), floor(14, 4.5, 40, 7.5), floor(15, 0, 23, 4.5), floor(24, 0, 32, 4.5), floor(33, 0, 40, 4.5), floor(14, 7.5, 40, 24),
+  ];
+  const furn = (key, category, x, z, w, h, d, rot = 0) => {
+    const [px, pz] = at(x, z);
+    return { id: key, category, transform: yawMat(turn + rot, px, h / 2, pz), dimensions: [w, h, d] };
+  };
+  const furniture = [
+    furn("registration", "table", 7.0, 4.6, 3.0, 0.9, 0.9),
+    furn("information", "table", 11.2, 2.4, 1.8, 0.9, 0.8),
+    furn("coffee", "table", 1.3, 9.6, 2.0, 0.9, 0.7, Math.PI / 2),
+    furn("charging", "table", 12.6, 1.8, 1.2, 0.75, 0.6),
+    furn("lobby-sofa-1", "sofa", 10.6, 9.4, 2.0, 0.85, 0.9), furn("lobby-sofa-2", "sofa", 10.6, 11.0, 2.0, 0.85, 0.9, Math.PI),
+    furn("lobby-table", "table", 8.2, 10.2, 0.8, 0.45, 0.8),
+    furn("lectern-203", "table", 19.0, 0.9, 0.6, 1.15, 0.5), furn("row-203a", "chair", 19.3, 2.3, 6.5, 0.85, 0.5), furn("row-203b", "chair", 19.3, 3.5, 6.5, 0.85, 0.5),
+    furn("lectern-204", "table", 28.0, 0.9, 0.6, 1.15, 0.5), furn("row-204a", "chair", 28.3, 2.3, 6.5, 0.85, 0.5), furn("row-204b", "chair", 28.3, 3.5, 6.5, 0.85, 0.5),
+    furn("quiet-sofa", "sofa", 36.5, 2.6, 2.0, 0.85, 0.9), furn("quiet-chair", "chair", 38.6, 1.4, 0.8, 0.9, 0.8, -0.5),
+    furn("hall-help", "table", 22.0, 9.6, 1.8, 0.9, 0.8),
+    furn("booth-40", "table", 18.0, 12.0, 1.8, 0.75, 0.8), furn("booth-41", "table", 18.0, 17.0, 1.8, 0.75, 0.8),
+    furn("booth-42", "table", 26.0, 12.0, 1.8, 0.75, 0.8), furn("booth-43", "table", 26.0, 17.0, 1.8, 0.75, 0.8),
+    furn("booth-44", "table", 34.0, 12.0, 1.8, 0.75, 0.8), furn("booth-45", "table", 34.0, 17.0, 1.8, 0.75, 0.8),
+    furn("rest-sofa-1", "sofa", 33.0, 21.5, 2.0, 0.85, 0.9), furn("rest-sofa-2", "sofa", 36.0, 21.5, 2.0, 0.85, 0.9),
+    furn("rest-table", "table", 34.5, 22.6, 1.2, 0.45, 0.6),
+  ];
+  const layout = {
+    version: 1, capturedAt: "2026-10-20T15:05:00Z", surfaces, furniture,
+    rooms: [
+      { id: "room-lobby", name: tr("Lobby"), outline: outline(0, 0, 14, 12), floorY: 0 },
+      { id: "room-corridor", name: tr("Corridor"), outline: outline(14, 4.5, 40, 7.5), floorY: 0 },
+      { id: "room-203", name: tr("Room 203"), outline: outline(15, 0, 23, 4.5), floorY: 0 },
+      { id: "room-204", name: tr("Room 204"), outline: outline(24, 0, 32, 4.5), floorY: 0 },
+      { id: "room-quiet", name: tr("Quiet room"), outline: outline(33, 0, 40, 4.5), floorY: 0 },
+      { id: "room-hall", name: tr("Exhibit Hall B"), outline: outline(14, 7.5, 40, 24), floorY: 0 },
+    ],
+    // Where it was "scanned", as the phone noted it: a public spot, not a real venue (Bryant Park, New York).
+    geo: { latitude: 40.7536, longitude: -73.9832, accuracy: 25, bearing: 6, bearingSpread: 12, anchor: [0, 0], takenAt: "2026-10-20T14:58:00Z" },
+  };
+  const pos = (x, y, z) => { const [px, pz] = at(x, z); return [px, y, pz]; };
+  const t = (h) => new Date(Date.now() - h * 3600e3).toISOString();
+  const item = (key, name, room, extra) => Object.assign({ id: key, room_id: SAMPLE_VENUE_ID, name, note: "", room, category: null, source: "ai",
+    detected_label: null, confidence: 0.85, position: null, size: null, yaw: null, placement: "lidar", contents: [], photo_path: null,
+    deleted: false, updated_at: t(26) }, extra);
+  // RoomPlan's furniture, renamed by the organizers; the lobby's desks say what they're for.
+  const piece = (key, name, room, x, y, z, w, h, d, rot = 0, extra = {}) => item(key, name, room, Object.assign({ source: "roomPlan",
+    detected_label: furniture.find((f) => f.id === key)?.category || "table", category: "furniture", confidence: 0.93,
+    position: pos(x, y, z), size: [w, h, d], yaw: turn + rot }, extra));
+  // A landmark pinned on the plan by the organizers (RoomPlan has no category for it).
+  const landmark = (key, name, room, x, y, z, note = "", extra = {}) => item(key, name, room, Object.assign({ source: "web", category: "fixture",
+    confidence: null, position: pos(x, y, z), placement: "plan", plan_scanned_at: "2026-10-20T15:05:00Z", note, updated_at: t(20) }, extra));
+  const lobby = tr("Lobby"), corridor = tr("Corridor"), r203 = tr("Room 203"), r204 = tr("Room 204"), quiet = tr("Quiet room"), hall = tr("Exhibit Hall B");
+  const items = [
+    piece("registration", tr("Registration desk"), lobby, 7.0, 0.45, 4.6, 3.0, 0.9, 0.9, 0, { note: tr("badges and the printed program; ask here for a sighted guide") }),
+    piece("information", tr("Information desk"), lobby, 11.2, 0.45, 2.4, 1.8, 0.9, 0.8, 0, { note: tr("lost and found; large-print maps") }),
+    piece("coffee", tr("Coffee station"), lobby, 1.3, 0.45, 9.6, 2.0, 0.9, 0.7, Math.PI / 2, { note: tr("coffee, tea and water, 8 to 4; cups on the left, lids on the right") }),
+    piece("charging", tr("Charging table"), lobby, 12.6, 0.38, 1.8, 1.2, 0.75, 0.6, 0, { note: tr("USB-C and Lightning cables, accessible height") }),
+    piece("lobby-sofa-1", tr("Lobby sofa"), lobby, 10.6, 0.43, 9.4, 2.0, 0.85, 0.9),
+    piece("lobby-sofa-2", tr("Lobby sofa"), lobby, 10.6, 0.43, 11.0, 2.0, 0.85, 0.9, Math.PI),
+    piece("lobby-table", tr("Low table"), lobby, 8.2, 0.23, 10.2, 0.8, 0.45, 0.8),
+    landmark("elevators", tr("Elevators"), lobby, 5.2, 1.0, 0.5, tr("three cars; the call button is on the right-hand wall at 1.1 m; floor announcements are on")),
+    landmark("entrance", tr("Main entrance"), lobby, 0.4, 1.0, 6.0, tr("double doors from the street, automatic")),
+    landmark("restroom-men", tr("Men's restroom"), lobby, 2.45, 1.0, 11.6, tr("door pulls inward")),
+    landmark("restroom-women", tr("Women's restroom"), lobby, 4.45, 1.0, 11.6, tr("door pulls inward")),
+    landmark("restroom-accessible", tr("Accessible restroom"), lobby, 6.5, 1.0, 11.6, tr("push-button door; also the quiet one")),
+    landmark("stairs", tr("Stairs to floor 1"), lobby, 12.8, 1.0, 11.2, tr("handrail on both sides; 22 steps with a landing")),
+    landmark("corridor-entry", tr("To the corridor"), lobby, 13.8, 1.0, 6.0, tr("3 m wide; rooms 203 and 204 on the left, Exhibit Hall B on the right")),
+    landmark("door-203", tr("Room 203 door"), corridor, 18.5, 1.0, 4.6, tr("usually open; the session schedule is on the wall beside it, in braille too")),
+    landmark("door-204", tr("Room 204 door"), corridor, 26.5, 1.0, 4.6, tr("usually open")),
+    landmark("door-quiet", tr("Quiet room door"), corridor, 35.5, 1.0, 4.6, tr("lights low; no phone calls")),
+    landmark("hall-entrance", tr("Exhibit Hall B entrance"), corridor, 22.0, 1.0, 7.4, tr("a 4 m opening; the help desk is straight ahead, 2 m in")),
+    landmark("fountain", tr("Water fountain"), corridor, 30.0, 0.9, 7.3, tr("two heights; bottle filler")),
+    landmark("exit-east", tr("Emergency exit, east end"), corridor, 39.6, 1.0, 6.0, tr("alarmed; opens onto the fire stairs")),
+    piece("lectern-203", tr("Lectern"), r203, 19.0, 0.58, 0.9, 0.6, 1.15, 0.5, 0, { note: tr("microphone and a reading light") }),
+    piece("row-203a", tr("Front row"), r203, 19.3, 0.43, 2.3, 6.5, 0.85, 0.5, 0, { note: tr("seven chairs; the aisle is on the left") }),
+    piece("row-203b", tr("Back row"), r203, 19.3, 0.43, 3.5, 6.5, 0.85, 0.5),
+    piece("lectern-204", tr("Lectern"), r204, 28.0, 0.58, 0.9, 0.6, 1.15, 0.5, 0, { note: tr("microphone; the hearing loop covers the front row") }),
+    piece("row-204a", tr("Front row"), r204, 28.3, 0.43, 2.3, 6.5, 0.85, 0.5, 0, { note: tr("seven chairs; reserved for anyone using the hearing loop") }),
+    piece("row-204b", tr("Back row"), r204, 28.3, 0.43, 3.5, 6.5, 0.85, 0.5),
+    landmark("captions-204", tr("Captioning screen"), r204, 29.6, 1.3, 0.2, tr("live captions; the front-left seats face it best")),
+    piece("quiet-sofa", tr("Sofa"), quiet, 36.5, 0.43, 2.6, 2.0, 0.85, 0.9),
+    piece("quiet-chair", tr("Armchair"), quiet, 38.6, 0.45, 1.4, 0.8, 0.9, 0.8, -0.5),
+    piece("hall-help", tr("Hall help desk"), hall, 22.0, 0.45, 9.6, 1.8, 0.9, 0.8, 0, { note: tr("a volunteer here walks you to any booth") }),
+    piece("booth-40", tr("Booth 40"), hall, 18.0, 0.38, 12.0, 1.8, 0.75, 0.8, 0, { note: tr("first on the left from the entrance") }),
+    piece("booth-41", tr("Booth 41"), hall, 18.0, 0.38, 17.0, 1.8, 0.75, 0.8),
+    piece("booth-42", tr("Booth 42: Acme Readers"), hall, 26.0, 0.38, 12.0, 1.8, 0.75, 0.8, 0, { note: tr("braille displays to try; staff can guide you from the hall entrance") }),
+    piece("booth-43", tr("Booth 43"), hall, 26.0, 0.38, 17.0, 1.8, 0.75, 0.8),
+    piece("booth-44", tr("Booth 44"), hall, 34.0, 0.38, 12.0, 1.8, 0.75, 0.8),
+    piece("booth-45", tr("Booth 45"), hall, 34.0, 0.38, 17.0, 1.8, 0.75, 0.8),
+    piece("rest-sofa-1", tr("Rest area sofa"), hall, 33.0, 0.43, 21.5, 2.0, 0.85, 0.9),
+    piece("rest-sofa-2", tr("Rest area sofa"), hall, 36.0, 0.43, 21.5, 2.0, 0.85, 0.9),
+    piece("rest-table", tr("Rest area table"), hall, 34.5, 0.23, 22.6, 1.2, 0.45, 0.6, 0, { note: tr("power outlets under the table") }),
+    landmark("exit-south", tr("Emergency exit, south-east"), hall, 39.6, 1.0, 23.5, tr("alarmed")),
+  ];
+  const room = { id: SAMPLE_VENUE_ID, name: tr("Conference center, floor 2 (sample)"), layout, site: { floor: 2 }, visibility: "place",
+    owner: "organizers", owner_email: null, can_edit: false, sample_theirs: true,
+    scanned_at: "2026-10-20T15:05:00Z", map_saved_at: "2026-10-20T15:09:00Z", updated_at: t(2), deleted: false };
+  const place = { room_id: SAMPLE_VENUE_ID, org_id: "sample-org", name: tr("Conference center"), category: "venue", address: "", floor: "2",
+    status: "published", verified_at: t(2), published_at: "2026-10-20T15:12:00Z", sponsor: "" };
+  return { rooms: [{ ...room, item_count: items.length, inside_count: 0 }], room, items, place, event: { ...SAMPLE_EVENT } };
+}
+
+/** Both samples, as demo mode holds them: the venue first, then the living room. */
+function demoSamples() {
+  const venue = sampleVenueData(), living = sampleData();
+  return { rooms: [...venue.rooms, ...living.rooms], items: { [SAMPLE_VENUE_ID]: venue.items, [living.room.id]: living.items },
+    full: { [SAMPLE_VENUE_ID]: venue.room, [living.room.id]: living.room }, place: venue.place, event: venue.event };
+}
+
 // ----- State -----
 const state = {
   mode: null,            // "remote" or "demo"
@@ -1189,6 +1358,7 @@ const state = {
   channel: null,
   realtimeLost: false,   // the live connection dropped and hasn't come back yet
   photosSignedAt: 0,
+  samples: null,         // demo mode: both samples (the venue and the living room), by room ID
 };
 
 let signOutAnyway = false;   // set after a sign-out attempt that left unsaved changes
@@ -1200,7 +1370,7 @@ function setStatus(kind, text) {
 }
 const saveFailures = {};   // item ID or "room:" + ID -> why its last save failed
 function refreshStatus() {
-  if (state.mode === "demo") return setStatus("demo", tr("Sample room: changes aren't saved"));
+  if (state.mode === "demo") return setStatus("demo", state.room && isPlace(state.room) ? tr("Sample venue: changes aren't saved") : tr("Sample room: changes aren't saved"));
   if (signOutAnyway) return setStatus("error", tr("Some changes aren't saved yet. Click Sign out again to leave without them."));
   const failing = Object.values(saveFailures);
   if (failing.length) return setStatus("error", tr("Not saved yet (%@). Retrying…", tr(failing[failing.length - 1])));
@@ -1304,16 +1474,22 @@ async function startRemote(client, user) {
   await loadRooms({ openOnlyRoom: true });
 }
 
-function startDemo() {
-  const sample = sampleData();
+function startDemo({ venue = false } = {}) {
+  const samples = demoSamples();
   state.mode = "demo";
   state.client = null;
   state.user = null;
-  state.rooms = sample.rooms;
-  usage.log("demo.open", null, { language: "en", assistant: !!chatService() });
+  state.rooms = samples.rooms;
+  state.samples = samples;
+  // The venue is a published floor of a sample event, as a joined floor looks.
+  state.places = { [idKey(SAMPLE_VENUE_ID)]: samples.place };
+  state.eventOf = { [idKey(SAMPLE_VENUE_ID)]: samples.event };
+  usage.log("demo.open", null, { language: "en", assistant: !!chatService(), sample: venue ? "venue" : "room" });
   showAccount();
   showWorkspace();
-  openRoomData(sample.room, sample.items);
+  const first = venue ? SAMPLE_VENUE_ID : state.rooms.find((r) => r.id !== SAMPLE_VENUE_ID).id;
+  openRoomData(samples.full[first], samples.items[first]);
+  refreshStatus();
 }
 
 /** The account, and the button that leaves it (or the sample). */
@@ -1365,7 +1541,7 @@ async function signOut() {
   Object.assign(state, { mode: null, client: null, user: null, rooms: [], room: null, items: [], selectedId: null, photos: {},
     editing: false, tool: "select", shape: null,
     unsaved: new Set(), loadError: null, photosSignedAt: 0, siteMissing: false, sharingMissing: false, shares: null, confirmingPublic: false,
-    familyMissing: false, attention: [], places: {}, eventOf: {}, placesMissing: false });
+    familyMissing: false, attention: [], places: {}, eventOf: {}, placesMissing: false, samples: null });
   watchTheirs();
   Object.keys(deletedHere).forEach((id) => delete deletedHere[id]);
   disposeThree();
@@ -1470,7 +1646,11 @@ async function loadRooms({ openOnlyRoom = false } = {}) {
 }
 
 async function openRoom(id, { keepSelection = false, note = null } = {}) {
-  if (state.mode === "demo") return;
+  if (state.mode === "demo") {
+    const full = state.samples?.full[id];
+    if (full) { openRoomData(full, state.samples.items[id]); refreshStatus(); if (note) flash(note); }
+    return;
+  }
   const ticket = ++state.openTicket;
   usage.once("editor.room:" + id, 60000, "editor.room", null, { mine: state.rooms.find((r) => r.id === id)?.owner === state.user?.id });
   setStatus("saving", tr("Opening the room…"));
@@ -2766,7 +2946,13 @@ function roomContext() {
     doors: (layout.surfaces || []).filter((x) => x.kind === "door" || x.kind === "opening").map((x) => ({ kind: x.kind === "door" ? (x.isOpen === false ? "door, may be closed" : "door") : "doorway", at: mid(x), width: r2(x.dimensions?.[0]) })),
     windows: (layout.surfaces || []).filter((x) => x.kind === "window").map((x) => ({ at: mid(x), width: r2(x.dimensions?.[0]) })),
     furniture: (layout.furniture || []).map((f) => { const m = mat(f.transform); return { kind: furnitureName(f.category), at: { x: r2(m[12]), z: r2(m[14]) }, size: size(f.dimensions) }; }),
-    rooms: (layout.rooms || []).map((x) => x.name).filter(Boolean),
+    // Each room by name and, when the scan outlined it, the extent it covers (so a floor's rooms can be told apart).
+    rooms: (layout.rooms || []).filter((x) => x.name).map((x) => {
+      const pts = (x.outline || []).filter((q) => Array.isArray(q) && q.length >= 2);
+      if (pts.length < 3) return x.name;
+      const xs = pts.map((q) => q[0]), zs = pts.map((q) => q[1]);
+      return { name: x.name, from: { x: r2(Math.min(...xs)), z: r2(Math.min(...zs)) }, to: { x: r2(Math.max(...xs)), z: r2(Math.max(...zs)) } };
+    }),
   };
   const byId = new Map(state.items.map((i) => [idKey(i.id), i]));
   const describe = (i) => {
@@ -2820,6 +3006,10 @@ function chatHTML(text) {
 }
 
 function chatIdeas() {
+  if (isPlace(state.room)) {
+    return [tr("How do I get to room 204 from the elevators?"), tr("Where's the coffee?"),
+            tr("Which booths are near the entrance?"), tr("Where are the accessible restrooms?")];
+  }
   return [tr("Where are the keys?"), tr("What's hard to find here, and how could it be easier?"),
           tr("What would a room like this usually have that isn't listed?"), tr("Which places are crowded?")];
 }
@@ -2830,8 +3020,10 @@ function renderChat() {
   if (!chat.messages.length) {
     const intro = document.createElement("p");
     intro.className = "chat-intro";
-    intro.textContent = tr("Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.", state.room?.name || tr("this room"))
-      + (state.mode === "demo" ? " " + tr("Free to try in the sample room; your own rooms need Plus.") : "")
+    intro.textContent = (isPlace(state.room)
+      ? tr("Ask about %@: how to get from one spot to another, where things are, what's near the entrance. The answers come from the floor as it's listed here.", state.room?.name || tr("this floor"))
+      : tr("Ask about what's in %@: where things are, what could be easier to find, what's usually in a room like this, where it's crowded. The answers come from the room as it's listed here.", state.room?.name || tr("this room")))
+      + (state.mode === "demo" ? " " + (isPlace(state.room) ? tr("Free to try in the sample venue; your own rooms need Plus.") : tr("Free to try in the sample room; your own rooms need Plus.")) : "")
       + " " + tr("Questions and answers are kept for 90 days, so whoever runs this service can see what the assistant is asked and where it falls short.");
     log.appendChild(intro);
   }
@@ -3289,6 +3481,7 @@ function placeSectionHTML(room) {
 const PUBLISH_PROBLEMS = {
   places_off: N_("Event floors are off in this cloud."),
   not_owner: N_("Only the room's owner publishes it."),
+  not_synced: N_("The room hasn't reached the cloud yet: open the app on the phone that scanned it, with internet, and try again."),
   no_map: N_("The room's map hasn't reached the cloud yet: open the app on the phone that scanned it, with internet, and try again."),
   owner_ok: N_("First, confirm the place's owner agreed."),
   event_not_found: N_("That event is gone. Choose another."),
@@ -7240,7 +7433,7 @@ function setPlacing(placing) {
 
 function wireEvents() {
   $("signin-form").addEventListener("submit", signIn);
-  $("demo-button").addEventListener("click", startDemo);
+  $("demo-button").addEventListener("click", () => startDemo({ venue: true }));
   $("sign-out").addEventListener("click", () => {
     // (In the app, the button closes the editor: what's unsaved goes first, and the app stays signed in.)
     if (host.on && state.mode === "remote") { flushSaves().then(() => usage.flush()).then(() => host.post({ type: "close" })); return; }
@@ -7570,6 +7763,7 @@ async function boot() {
   $("cfg-email").value = store.get(STORAGE_KEYS.email) || "";
   const params = new URLSearchParams(location.search);
   if (params.has("demo") || location.hash === "#sample") { startDemo(); return; }
+  if (location.hash === "#venue") { startDemo({ venue: true }); return; }
   if (host.on) { await startHosted(); return; }
   const url = service ? SERVICE.url : store.get(STORAGE_KEYS.url), key = service ? SERVICE.key : store.get(STORAGE_KEYS.key);
   if (url && key && window.supabase) {
