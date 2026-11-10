@@ -388,6 +388,14 @@ button { cursor: pointer; }
 .ev-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .ev-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.14em; font-weight: 700; }
 .ev-form { display: grid; gap: 10px; padding: 12px; border: 1px dashed var(--rule-strong); border-radius: 10px; }
+.ev-report { display: grid; gap: 8px; padding: 10px 0 0; border-top: 1px solid var(--rule); }
+.ev-report h4 { margin: 0; font-size: 14.5px; }
+.ev-report h5 { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+.ev-report table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13.5px; }
+.ev-report th, .ev-report td { text-align: start; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule); vertical-align: baseline; }
+.ev-report th { font-weight: 600; color: var(--ink-2); }
+.ev-report .num { text-align: end; padding-inline-end: 0; white-space: nowrap; }
+.ev-report .ev-report-wrap { overflow-x: auto; }
 .map-pin.place { border-style: dashed; }
 .offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
 .offer {
@@ -3367,7 +3375,7 @@ async function planCheck(waiting) {
 // checked, who joined and how often people were told the way; and the events
 // this account joined as an attendee), publishing a room from its panel,
 // printing a door's QR code, and listing a booth by the name people ask for.
-const events = { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, known: false, loading: false, busy: false };
+const events = { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, reports: {}, open: {}, forms: {}, message: null, isAdmin: false, known: false, loading: false, busy: false };
 
 /** Whether this editor deals in events: signed in to a cloud that has them. */
 function eventsAvailable() {
@@ -3439,11 +3447,74 @@ async function loadOrgEvents(orgId, { force = false } = {}) {
   return events.orgEvents[orgId];
 }
 
-/** An event's floors and listings, and how it's doing. */
+/** An event's floors and listings, how it's doing, and what its attendees asked the way to. */
 async function loadEventDetails(eventId) {
-  const [details, stats] = await Promise.all([state.client.rpc("event_details", { event: eventId }), state.client.rpc("event_stats", { event: eventId })]);
+  const [details, stats, report] = await Promise.all([state.client.rpc("event_details", { event: eventId }), state.client.rpc("event_stats", { event: eventId }),
+    state.client.rpc("event_report", { event: eventId })]);
   events.details[eventId] = details.error ? null : details.data;
   events.stats[eventId] = stats.error ? null : stats.data;
+  // (A cloud from before the report has no such function: the panel goes without it.)
+  events.reports[eventId] = report.error ? null : report.data;
+}
+
+/**
+ * What an event's attendees asked the way to (event_report): each place and how often, what was asked for
+ * that isn't on the map, and what they said wasn't there. Counts of places, never of people.
+ */
+function eventReportHTML(e, report) {
+  if (!report) return "";
+  const n = (v) => Number(v) || 0;
+  const asked = n(report.asked), arrived = n(report.arrived), guests = n(report.guests), people = n(report.accounts) + guests;
+  const missed = report.missed || [], notThere = report.not_there || [], once = n(report.missed_once);
+  const head = `<h4>${tr("What people asked for")}</h4>`;
+  const note = `<span class="help">${tr("Counted on each phone and sent as numbers: which place and how often, never who asked or when in the day.")}</span>`;
+  if (!asked && !missed.length && !once) {
+    return `<div class="ev-report" data-report="${esc(e.id)}">${head}
+      <span class="help">${esc(tr("%@ on their phones so far. Nothing asked for yet: each time someone asks the way to a place, it's counted here.", people))}</span>${note}</div>`;
+  }
+  const table = (title, columns, rows) => !rows.length ? "" : `<h5>${title}</h5><div class="ev-report-wrap"><table><thead><tr>${
+    columns.map((c, i) => `<th scope="col"${i ? ' class="num"' : ""}>${c}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  const places = (report.places || []).slice(0, 12);
+  const listings = (report.listings || []).filter((l) => n(l.asked) || n(l.arrived));
+  const days = report.days || [];
+  return `<div class="ev-report" data-report="${esc(e.id)}">${head}
+    <span class="help">${esc(tr("%1$@ on their phones (%2$@ with no account) · asked the way %3$@ times · said they'd arrived %4$@ times", people, guests, asked, arrived))}</span>
+    ${table(tr("Most asked for"), [tr("Place"), tr("Asked"), tr("Arrived")], places.map((p) =>
+      `<tr><td>${esc(p.name || "")}${p.floor ? ` <span class="help">${esc(tr("floor %@", p.floor))}</span>` : ""}</td><td class="num">${n(p.asked)}</td><td class="num">${n(p.arrived)}</td></tr>`))}
+    ${(report.places || []).length > places.length ? `<span class="help">${esc(tr("And %@ more places: Copy the numbers has them all.", (report.places || []).length - places.length))}</span>` : ""}
+    ${table(tr("Listed exhibitors and sponsors"), [tr("Listing"), tr("Asked"), tr("Arrived")], listings.map((l) =>
+      `<tr><td>${esc(l.title || "")}${l.sponsor ? ` <span class="help">${esc(l.sponsor)}</span>` : ""}</td><td class="num">${n(l.asked)}</td><td class="num">${n(l.arrived)}</td></tr>`))}
+    ${missed.length || once ? `<h5>${tr("Asked for, and not on the map")}</h5><span class="help">${missed.length ? esc(joinList(missed.map((m) => tr("%1$@ (%2$@)", m.words, n(m.count))))) : ""}${
+      once ? (missed.length ? " · " : "") + esc(tr("%@ more asked for once (not shown until asked for twice)", once)) : ""}</span>` : ""}
+    ${notThere.length ? `<h5>${tr("Said not to be where the map has it")}</h5><span class="help">${esc(joinList(notThere.map((m) => tr("%1$@ (%2$@)", m.name, n(m.count)))))}</span>` : ""}
+    ${days.length > 1 ? `<h5>${tr("By day")}</h5><span class="help">${esc(days.map((d) => tr("%1$@: %2$@", fmtDay(String(d.day).length === 10 ? d.day + "T12:00:00" : d.day), n(d.asked))).join(" · "))}</span>` : ""}
+    <div class="ev-row"><button type="button" class="btn ghost" data-copy-report="${esc(e.id)}">${tr("Copy the numbers")}</button></div>
+    ${note}</div>`;
+}
+
+/** The same numbers as text, to paste into a message or a sheet (tabs between columns). */
+function eventReportText(e, report) {
+  const n = (v) => Number(v) || 0;
+  const lines = [tr("%@: what people asked the way to", e?.name || tr("Event")),
+    tr("%1$@ on their phones (%2$@ with no account) · asked the way %3$@ times · said they'd arrived %4$@ times",
+      n(report.accounts) + n(report.guests), n(report.guests), n(report.asked), n(report.arrived)), ""];
+  lines.push([tr("Place"), tr("Floor"), tr("Asked"), tr("Arrived"), tr("Said not there")].join("\t"));
+  (report.places || []).forEach((p) => lines.push([p.name || "", p.floor || "", n(p.asked), n(p.arrived), n(p.missing)].join("\t")));
+  const listings = report.listings || [];
+  if (listings.length) {
+    lines.push("", [tr("Listing"), tr("Sponsor"), tr("Asked"), tr("Arrived")].join("\t"));
+    listings.forEach((l) => lines.push([l.title || "", l.sponsor || "", n(l.asked), n(l.arrived)].join("\t")));
+  }
+  if ((report.missed || []).length) {
+    lines.push("", [tr("Asked for, and not on the map"), tr("Times")].join("\t"));
+    report.missed.forEach((m) => lines.push([m.words, n(m.count)].join("\t")));
+  }
+  if ((report.days || []).length) {
+    lines.push("", [tr("Day"), tr("Asked"), tr("Arrived")].join("\t"));
+    report.days.forEach((d) => lines.push([d.day, n(d.asked), n(d.arrived)].join("\t")));
+  }
+  lines.push("", tr("Counted on each phone and sent as numbers: which place and how often, never who asked or when in the day."));
+  return lines.join("\n");
 }
 
 // --- The room's panel: publishing it, or what it is as a floor ---
@@ -3467,8 +3538,8 @@ function placeSectionHTML(room) {
         ${place?.published_at ? `<div class="fact"><dt>${tr("Published")}</dt><dd>${esc(fmtWhen(place.published_at))}</dd></div>` : ""}
       </dl>
       <div class="field"><label for="place-landmark">${tr("A code for a door")}</label>
-        <div class="thing"><input id="place-landmark" dir="auto" placeholder="${esc(tr("the main entrance"))}" maxlength="60"><button type="button" class="btn" id="place-door-qr">${tr("Print the code")}</button></div>
-        <span class="hint">${tr("Stuck by a door, it opens this floor on a visitor's iPhone, started from that spot. Say what the code is by, as people would.")}</span>
+        <div class="thing"><input id="place-landmark" dir="auto" placeholder="${esc(tr("the main entrance"))}" maxlength="60"><button type="button" class="btn" id="place-door-qr">${tr("Print the code")}</button><button type="button" class="btn ghost" id="place-door-link">${tr("Copy its link")}</button></div>
+        <span class="hint">${tr("Stuck by a door, it opens this floor on a visitor's iPhone, started from that spot. Say what the code is by, as people would. The link does the same from an NFC sticker: under a room's braille sign, it's found by touch.")}</span>
       </div>
       <div class="row"><button type="button" class="btn" id="place-unpublish"${events.busy ? " disabled" : ""}>${tr("Unpublish")}</button></div>
     </div>`;
@@ -3666,7 +3737,7 @@ function eventsClose() {
 /** Signed out: nothing of the account's left here. */
 function eventsForget() {
   eventsClose();
-  Object.assign(events, { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, open: {}, forms: {}, message: null, isAdmin: false, known: false, loading: false, busy: false });
+  Object.assign(events, { orgs: null, mine: null, orgEvents: {}, details: {}, stats: {}, reports: {}, open: {}, forms: {}, message: null, isAdmin: false, known: false, loading: false, busy: false });
 }
 
 const EVENT_STATUS = { draft: N_("draft"), live: N_("live"), ended: N_("ended") };
@@ -3684,7 +3755,8 @@ function eventItemHTML(org, e) {
       ${floors.length ? `<ul class="ev-floors">${floors.map((f) => `<li><span>${esc(f.floor ? tr("Floor %@: %@", f.floor, f.name) : f.name)}</span><span class="help">${f.verified_at ? esc(tr("last checked %@", fmtDay(f.verified_at))) : tr("not checked yet")}</span>
           <span class="ev-row"><button type="button" class="btn ghost" data-open-room="${esc(f.room_id)}">${tr("Open")}</button><button type="button" class="btn ghost" data-door-qr="${esc(f.room_id)}" data-door-name="${esc(f.name)}">${tr("Door code")}</button></span></li>`).join("")}</ul>`
         : `<span class="help">${tr("No floors yet: open a scanned room of yours and publish it into this event.")}</span>`}
-      ${(details?.listings || []).length ? `<span class="help">${esc(tr("Listed: %@", joinList(details.listings.map((l) => l.title))))}</span>` : ""}`;
+      ${(details?.listings || []).length ? `<span class="help">${esc(tr("Listed: %@", joinList(details.listings.map((l) => l.title))))}</span>` : ""}
+      ${eventReportHTML(e, events.reports[e.id])}`;
   }
   return `<li>
     <div class="ev-row"><strong>${esc(e.name)}</strong><span class="ev-code" dir="ltr">${esc(e.code)}</span><span class="badge ${e.status === "live" ? "shared" : "public"}">${esc(own(EVENT_STATUS, e.status) ? tr(EVENT_STATUS[e.status]) : e.status)}</span></div>
@@ -3745,7 +3817,13 @@ function renderEvents() {
         <span class="help">${esc([e.venue, e.city].filter(Boolean).join(", "))}${e.places != null ? (e.venue || e.city ? " · " : "") + esc(countOf(Number(e.places) || 0, "floor")) : ""}</span>
         <div class="ev-row"><button type="button" class="btn ghost" data-leave-event="${esc(e.code)}">${tr("Leave the event")}</button></div></li>`).join("")}</ul>`
       : `<p class="help">${tr("None yet. Join an event in the app with its six-letter code (Venues, then Join an event); its floors then show here too, to look at.")}</p>`}</section>`);
+  // (What's being typed stays typed: the panel is drawn again when its lists arrive, which can be mid-word.)
+  const typed = {};
+  body.querySelectorAll("input[id]").forEach((input) => { if (input.value) typed[input.id] = input.value; });
+  const focused = document.activeElement && body.contains(document.activeElement) ? document.activeElement.id : "";
   body.innerHTML = parts.join("");
+  Object.keys(typed).forEach((id) => { const input = $(id); if (input && !input.value) input.value = typed[id]; });
+  if (focused && $(focused) && document.activeElement !== $(focused)) $(focused).focus();
 }
 
 /** What the panel's buttons do. */
@@ -3759,6 +3837,17 @@ async function eventsClick(e) {
     (events.orgs || []).forEach((o) => { if (o.id === pledge.dataset.pledge) o.pledged = true; });
     events.message = tr("Thank you. You can publish floors now.");
     renderEvents();
+    return;
+  }
+  const copyReport = t.closest("[data-copy-report]");
+  if (copyReport) {
+    const id = copyReport.dataset.copyReport, report = events.reports[id];
+    if (!report) return;
+    const ev = Object.values(events.orgEvents).flat().find((x) => x && x.id === id);
+    let copied = false;
+    try { await navigator.clipboard.writeText(eventReportText(ev, report)); copied = true; } catch { copied = false; }
+    usage.log("event.report_copy", copied);
+    flash(copied ? tr("Copied: paste it into a message or a sheet.") : tr("Couldn't copy from here. Select the numbers and copy them by hand."));
     return;
   }
   const newEvent = t.closest("[data-new-event]");
@@ -3799,6 +3888,7 @@ async function eventsClick(e) {
     usage.log("org.create", !error, error ? { error: friendlyError(error) } : {});
     if (error) { flash(tr("Couldn't make it: %@", tr(friendlyError(error)))); return; }
     events.message = tr("%@ is made. Add its members by email, then make its first event.", name);
+    if ($("org-name")) $("org-name").value = "";
     await eventsRefresh();
     return;
   }
@@ -3848,6 +3938,15 @@ function doorQR(roomId, name, landmark) {
   usage.log("place.qr", null, { landmark: !!landmark });
   qrPrint({ title: name || tr("Floor"), big: landmark ? tr("By the %@", landmark) : "", link: placeLink(roomId, landmark),
     caption: tr("Scan with your iPhone's camera to open this floor in Whereabouts, started from here.") });
+}
+
+/** A door's link, copied: for an NFC sticker (written with any tag-writing app), or a message. */
+async function doorLink(roomId, landmark) {
+  const link = placeLink(roomId, landmark);
+  let copied = false;
+  try { await navigator.clipboard.writeText(link); copied = true; } catch { copied = false; }
+  usage.log("place.link", copied, { landmark: !!landmark });
+  flash(copied ? tr("Copied: %@", link) : tr("Couldn't copy from here. The link is %@", link));
 }
 
 /** Prints a QR code (a page of its own, with the words around it). */
@@ -7631,6 +7730,7 @@ function wireEvents() {
     if (e.target.closest("#place-publish")) { publishRoom(); return; }
     if (e.target.closest("#place-unpublish")) { unpublishRoom(); return; }
     if (e.target.closest("#place-door-qr")) { if (state.room) doorQR(state.room.id, state.room.name, ($("place-landmark")?.value || "").trim()); return; }
+    if (e.target.closest("#place-door-link")) { if (state.room) doorLink(state.room.id, ($("place-landmark")?.value || "").trim()); return; }
     if (e.target.closest("#listing-add")) { addListing(); return; }
     const removeListed = e.target.closest("[data-remove-listing]");
     if (removeListed) { removeListing(removeListed.dataset.removeListing); return; }
